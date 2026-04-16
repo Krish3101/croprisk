@@ -30,7 +30,7 @@ const Prices = () => {
                 <h1 className="text-2xl font-bold text-gray-900">Market Prices (Mandi)</h1>
 
                 {/* Search Form */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div className="premium-card p-6">
                     <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label htmlFor="crop" className="block text-sm font-medium text-gray-700 mb-1">
@@ -93,7 +93,7 @@ const Prices = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
+                            className="premium-card p-6"
                         >
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                                 <div>
@@ -135,7 +135,7 @@ const Prices = () => {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.2 }}
-                                className="bg-white p-6 rounded-xl shadow-sm border border-gray-100"
+                                className="premium-card p-6"
                             >
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Price Trend (Last 7 Days)</h3>
                                 <div className="h-48 flex items-end justify-between gap-2">

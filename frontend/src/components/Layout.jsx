@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import FloatingAssistant from './FloatingAssistant';
 
 const Layout = ({ children }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -18,7 +19,6 @@ const Layout = ({ children }) => {
         { icon: CloudSun, label: 'Weather', path: '/weather' },
         { icon: TrendingUp, label: 'Market Prices', path: '/prices' },
         { icon: Leaf, label: 'Soil Health', path: '/soil' },
-        { icon: MessageSquare, label: 'Assistant', path: '/chat' },
     ];
 
     const handleLogout = async () => {
@@ -126,17 +126,16 @@ const Layout = ({ children }) => {
                         >
                             <Menu className="w-6 h-6" />
                         </button>
-                        <h1 className="text-xl font-semibold text-gray-800">
-                            {navItems.find(i => i.path === location.pathname)?.label || 'Dashboard'}
-                        </h1>
                     </div>
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth">
-                    <div className="max-w-7xl mx-auto">
+                <main className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth relative">
+                    <div className="max-w-7xl mx-auto pb-24">
                         {children}
                     </div>
+                    
+                    <FloatingAssistant />
                 </main>
             </div>
         </div>

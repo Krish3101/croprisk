@@ -155,7 +155,7 @@ const Finances = () => {
                         animate="show"
                         className="grid grid-cols-1 md:grid-cols-3 gap-6"
                     >
-                    <motion.div variants={item} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <motion.div variants={item} className="premium-card p-6">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-green-50 rounded-full text-green-600">
                                 <TrendingUp className="w-6 h-6" />
@@ -167,7 +167,7 @@ const Finances = () => {
                         </div>
                     </motion.div>
 
-                    <motion.div variants={item} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <motion.div variants={item} className="premium-card p-6">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-red-50 rounded-full text-red-600">
                                 <TrendingDown className="w-6 h-6" />
@@ -179,7 +179,7 @@ const Finances = () => {
                         </div>
                     </motion.div>
 
-                    <motion.div variants={item} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <motion.div variants={item} className="premium-card p-6">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-blue-50 rounded-full text-blue-600">
                                 <IndianRupee className="w-6 h-6" />
@@ -211,7 +211,7 @@ const Finances = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+                        className="premium-card overflow-hidden"
                     >
                         <div className="p-6 border-b border-gray-100">
                             <h2 className="text-lg font-semibold text-gray-900">Recent Transactions</h2>
@@ -267,7 +267,7 @@ const Finances = () => {
                         className="space-y-6"
                     >
                         {/* Income vs Expenses Timeline */}
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div className="premium-card p-6">
                             <div className="flex items-center gap-2 mb-6">
                                 <LineChart className="w-5 h-5 text-blue-600" />
                                 <h2 className="text-lg font-semibold text-gray-900">Income vs Expenses Over Time</h2>
@@ -332,7 +332,7 @@ const Finances = () => {
                         </div>
 
                         {/* Category-wise Expenses */}
-                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <div className="premium-card p-6">
                             <div className="flex items-center gap-2 mb-6">
                                 <BarChart3 className="w-5 h-5 text-purple-600" />
                                 <h2 className="text-lg font-semibold text-gray-900">Expenses by Category</h2>

@@ -56,7 +56,7 @@ const Dashboard = () => {
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-r from-green-600 to-green-700 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden"
+                    className="bg-gradient-to-br from-green-600 to-emerald-800 rounded-3xl p-8 text-white shadow-xl shadow-green-900/10 relative overflow-hidden"
                 >
                     <div className="relative z-10">
                         <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.full_name || user?.username}!</h1>
@@ -72,7 +72,7 @@ const Dashboard = () => {
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                 >
                     {/* Weather Widget */}
-                    <motion.div variants={item} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+                    <motion.div variants={item} className="premium-card p-6 group">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-semibold text-gray-900">Weather</h3>
                             <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
@@ -104,7 +104,7 @@ const Dashboard = () => {
                     </motion.div>
 
                     {/* Crops Widget */}
-                    <motion.div variants={item} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+                    <motion.div variants={item} className="premium-card p-6 group">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-semibold text-gray-900">Active Crops</h3>
                             <div className="p-2 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors">
@@ -131,7 +131,7 @@ const Dashboard = () => {
                     </motion.div>
 
                     {/* Finance Widget */}
-                    <motion.div variants={item} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
+                    <motion.div variants={item} className="premium-card p-6 group">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-semibold text-gray-900">Finances</h3>
                             <div className="p-2 bg-yellow-50 rounded-lg group-hover:bg-yellow-100 transition-colors">
@@ -170,7 +170,7 @@ const Dashboard = () => {
                     </motion.div>
 
                     {/* AI Insights Widget */}
-                    <motion.div variants={item} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group lg:col-span-3">
+                    <motion.div variants={item} className="premium-card p-6 group lg:col-span-3">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-semibold text-gray-900">AI Insights</h3>
                             <div className="p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">

@@ -82,7 +82,7 @@ const Weather = () => {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-8 text-white shadow-lg"
+                            className="bg-gradient-to-br from-blue-50-600 rounded-2xl p-8 text-white shadow-lg"
                         >
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-2">
@@ -109,7 +109,7 @@ const Weather = () => {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.2 }}
-                                className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-3"
+                                className="premium-card p-6 flex flex-col items-center justify-center gap-3"
                             >
                                 <div className="p-3 bg-blue-50 rounded-full text-blue-600">
                                     <Droplets className="w-6 h-6" />
@@ -124,7 +124,7 @@ const Weather = () => {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.3 }}
-                                className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center gap-3"
+                                className="premium-card p-6 flex flex-col items-center justify-center gap-3"
                             >
                                 <div className="p-3 bg-gray-50 rounded-full text-gray-600">
                                     <Wind className="w-6 h-6" />
@@ -164,7 +164,7 @@ const Weather = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.5 + index * 0.1 }}
-                                    className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all hover:scale-105"
+                                    className="premium-card p-5 hover:scale-105"
                                 >
                                     <div className="text-center">
                                         <div className="text-sm font-medium text-gray-900 mb-2">

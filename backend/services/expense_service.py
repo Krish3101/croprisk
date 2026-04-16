@@ -14,7 +14,16 @@ from utils.helpers import StorageError, format_date_display, format_date_iso
 logger = get_logger(__name__)
 
 
-def add_expense(db: Session, title: str, amount: float, transaction_type: str, date: str, crop_id: int = None) -> dict[str, Any]:
+def add_expense(
+    db: Session, 
+    title: str, 
+    amount: float, 
+    transaction_type: str, 
+    date: str, 
+    category: str = None, 
+    description: str = None, 
+    crop_id: int = None
+) -> dict[str, Any]:
     """Add a new expense or income transaction
 
     Args:
@@ -50,7 +59,8 @@ def add_expense(db: Session, title: str, amount: float, transaction_type: str, d
             amount=float(amount),
             type=transaction_type,
             date=formatted_date,
-            description="",  # Optional description
+            category=category,
+            description=description if description else "",
             crop_id=crop_id if crop_id else None,
         )
 

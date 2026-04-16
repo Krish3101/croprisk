@@ -24,7 +24,16 @@ def add_expense(expense: ExpenseCreate, db: Session = Depends(get_db)) -> dict[s
     logger.info(f"Adding {expense.type}: {expense.title} - Rs.{expense.amount}")
 
     try:
-        return add_expense_service(db, expense.title, expense.amount, expense.type, expense.date, expense.crop_id)
+        return add_expense_service(
+            db, 
+            title=expense.title, 
+            amount=expense.amount, 
+            transaction_type=expense.type, 
+            date=expense.date, 
+            category=expense.category,
+            description=expense.description,
+            crop_id=expense.crop_id
+        )
     except StorageError as e:
         logger.warning(f"Storage error: {e}")
         db.rollback()
