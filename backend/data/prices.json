@@ -1,0 +1,35 @@
+[
+  {
+    "crop": "Tomato",
+    "state": "Maharashtra",
+    "district": "Pune",
+    "market": "Pune APMC",
+    "modal_price": "3800",
+    "min_price": "3200",
+    "max_price": "4200",
+    "arrival_date": "2025-11-01",
+    "variety": "Local"
+  },
+  {
+    "crop": "Onion",
+    "state": "Maharashtra",
+    "district": "Nashik",
+    "market": "Lasalgaon",
+    "modal_price": "2500",
+    "min_price": "2000",
+    "max_price": "3000",
+    "arrival_date": "2025-11-02",
+    "variety": "Red"
+  },
+  {
+    "crop": "Potato",
+    "state": "Uttar Pradesh",
+    "district": "Agra",
+    "market": "Agra Mandi",
+    "modal_price": "1600",
+    "min_price": "1400",
+    "max_price": "1900",
+    "arrival_date": "2025-11-03",
+    "variety": "Table"
+  }
+]
