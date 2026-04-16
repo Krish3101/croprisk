@@ -46,6 +46,8 @@ export const authApi = {
         });
     },
     register: (data) => api.post(API_CONFIG.ENDPOINTS.AUTH.REGISTER, data),
+    getProfile: () => api.get('/auth/me'),
+    logout: () => api.post('/auth/logout'),
 };
 
 export const weatherApi = {
@@ -57,8 +59,8 @@ export const cropsApi = {
     getAll: () => api.get(API_CONFIG.ENDPOINTS.CROPS.LIST),
     add: (data) => api.post(API_CONFIG.ENDPOINTS.CROPS.ADD, data),
     updateStage: ({ cropId, stage }) => 
-        api.put(`${API_CONFIG.ENDPOINTS.CROPS.UPDATE_STAGE}/${cropId}`, { stage }),
-    delete: (cropId) => api.delete(`${API_CONFIG.ENDPOINTS.CROPS.DELETE}/${cropId}`),
+        api.patch(`${API_CONFIG.ENDPOINTS.CROPS.DELETE}/${cropId}/stage`, { stage }),
+    delete: (cropId) => api.post(`${API_CONFIG.ENDPOINTS.CROPS.DELETE}/delete`, { id: cropId }),
 };
 
 export const expensesApi = {

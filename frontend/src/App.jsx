@@ -9,7 +9,6 @@ import { AuthProvider } from './context/AuthContext';
 import { queryClient } from './lib/queryClient';
 
 // Lazy load pages for code splitting
-const Chat = lazy(() => import('./pages/Chat'));
 const Crops = lazy(() => import('./pages/Crops'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Finances = lazy(() => import('./pages/Finances'));
@@ -78,13 +77,6 @@ function App() {
                         <ProtectedRoute>
                             <Layout>
                                 <Soil />
-                            </Layout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/chat" element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Chat />
                             </Layout>
                         </ProtectedRoute>
                     } />

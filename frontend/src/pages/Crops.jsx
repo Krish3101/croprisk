@@ -102,7 +102,7 @@ const Crops = () => {
                             <motion.div
                                 key={crop.id}
                                 variants={item}
-                                className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                                className="premium-card p-6"
                             >
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="p-3 bg-green-50 rounded-full text-green-600">
