@@ -1,0 +1,55 @@
+[
+    {
+        "title": "ekioqwjQ",
+        "amount": 333.0,
+        "type": "income",
+        "date": "03 Nov 2025"
+    },
+    {
+        "title": "AA",
+        "amount": 222.0,
+        "type": "expense",
+        "date": "04 Nov 2025"
+    },
+    {
+        "title": "DBNJHJQ",
+        "amount": 22.0,
+        "type": "income",
+        "date": "11 Dec 2"
+    },
+    {
+        "title": "seeds",
+        "amount": 10000.0,
+        "type": "expense",
+        "date": "02 Nov 2025",
+        "ts": "2025-11-02"
+    },
+    {
+        "title": "Test Fertilizer",
+        "amount": 1500.0,
+        "type": "expense",
+        "date": "06 Nov 2025",
+        "ts": "2025-11-06"
+    },
+    {
+        "title": "sell",
+        "amount": 15000.0,
+        "type": "income",
+        "date": "06 Nov 2025",
+        "ts": "2025-11-06"
+    },
+    {
+        "title": "f",
+        "amount": 100.0,
+        "type": "expense",
+        "date": "05 Nov 2025",
+        "ts": "2025-11-05"
+    },
+    {
+        "title": "FERTIZER",
+        "amount": 20000.0,
+        "type": "expense",
+        "date": "10 Nov 2025",
+        "ts": "2025-11-10"
+    }
+]

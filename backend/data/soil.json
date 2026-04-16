@@ -1,0 +1,12 @@
+{
+  "default": {
+    "soil_type": "Clay Loam",
+    "ph": 6.8,
+    "organic_carbon": "0.7%",
+    "moisture": "35%",
+    "nitrogen": "High",
+    "phosphorus": "Medium",
+    "potassium": "High",
+    "last_tested": "2025-07-12"
+  }
+}

@@ -1,0 +1,23 @@
+[
+    {
+        "crop": "Test Crop",
+        "plot": "Test Plot",
+        "sown_date": "19 Nov 2025",
+        "stage": "Sown",
+        "progress": 0
+    },
+    {
+        "crop": "Test Crop",
+        "plot": "Test Plot",
+        "sown_date": "19 Nov 2025",
+        "stage": "Sown",
+        "progress": 0
+    },
+    {
+        "crop": "Test Crop",
+        "plot": "Test Plot",
+        "sown_date": "19 Nov 2025",
+        "stage": "Sown",
+        "progress": 0
+    }
+]
