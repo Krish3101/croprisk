@@ -5,7 +5,7 @@ Handles weather data retrieval from OpenWeather API with database caching
 from datetime import datetime
 from typing import Any
 
-import requests
+import httpx
 from sqlalchemy.orm import Session
 
 from config import get_logger, settings
@@ -14,7 +14,7 @@ from models.database import WeatherCache
 logger = get_logger(__name__)
 
 
-def get_weather(db: Session, city: str) -> dict[str, Any]:
+async def get_weather(db: Session, city: str) -> dict[str, Any]:
     """Get weather information for a city with caching
 
     Args:
@@ -37,12 +37,12 @@ def get_weather(db: Session, city: str) -> dict[str, Any]:
             logger.info(f"Using cached weather data for {city}")
             return {
                 "city": cache_entry.city,
-                "temp": cache_entry.temperature,
-                "temperature": cache_entry.temperature,  # Alias for compatibility
-                "condition": cache_entry.condition,
-                "weather": cache_entry.condition,  # Alias for compatibility
+                "temp": cache_entry.temp,
                 "humidity": cache_entry.humidity,
+                "weather": cache_entry.weather_main,
+                "description": cache_entry.weather_desc,
                 "wind_speed": cache_entry.wind_speed,
+                "icon": cache_entry.icon,
                 "cached": True,
             }
         else:
@@ -55,89 +55,97 @@ def get_weather(db: Session, city: str) -> dict[str, Any]:
 
     try:
         url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={settings.OPENWEATHER_KEY}&units=metric"
-        response = requests.get(url, timeout=10)
         
-        # Handle various HTTP status codes
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=10)
+
         if response.status_code == 404:
-            logger.warning(f"City not found: {city}")
-            return {"error": f"City '{city}' not found"}
-        
-        if response.status_code == 401:
-            logger.error("Invalid OpenWeather API key")
-            return {"error": "Weather service authentication failed"}
-        
+            return {"error": "City not found"}
+        elif response.status_code != 200:
+            logger.warning(f"Weather API returned status {response.status_code}: {response.text}")
+            if cache_entry:
+                # Fall back to stale cache if API temporarily fails
+                return {
+                    "city": cache_entry.city,
+                    "temp": cache_entry.temp,
+                    "humidity": cache_entry.humidity,
+                    "weather": cache_entry.weather_main,
+                    "description": cache_entry.weather_desc,
+                    "wind_speed": cache_entry.wind_speed,
+                    "icon": cache_entry.icon,
+                    "cached": True,
+                    "stale": True,
+                }
+            return {"error": "Weather service temporarily unavailable"}
+
         data = response.json()
-
-        if data.get("cod") != 200:
-            logger.warning(f"Weather API error for {city}: {data.get('message')}")
-            return {"error": data.get("message", "Weather data not available")}
-
-        # Extract data - using standardized field names
-        weather_data = {
-            "city": data.get("name", city),
-            "temp": data.get("main", {}).get("temp", 0),
-            "temperature": data.get("main", {}).get("temp", 0),  # Alias for compatibility
-            "humidity": data.get("main", {}).get("humidity", 0),
-            "condition": data.get("weather", [{}])[0].get("description", "Unknown"),
-            "weather": data.get("weather", [{}])[0].get("description", "Unknown"),  # Alias for compatibility
-            "wind_speed": data.get("wind", {}).get("speed", 0),
-        }
+        weather_main = data["weather"][0]["main"] if data.get("weather") else "Unknown"
+        weather_desc = data["weather"][0]["description"] if data.get("weather") else "Unknown"
+        icon = data["weather"][0]["icon"] if data.get("weather") else "01d"
+        temp = data.get("main", {}).get("temp", 0)
+        humidity = data.get("main", {}).get("humidity", 0)
+        wind_speed = data.get("wind", {}).get("speed", 0)
 
         # 3. Update Cache
         if cache_entry:
-            # Update existing
-            cache_entry.temperature = weather_data["temp"]
-            cache_entry.humidity = weather_data["humidity"]
-            cache_entry.condition = weather_data["condition"]
-            cache_entry.wind_speed = weather_data["wind_speed"]
+            cache_entry.temp = temp
+            cache_entry.humidity = humidity
+            cache_entry.weather_main = weather_main
+            cache_entry.weather_desc = weather_desc
+            cache_entry.wind_speed = wind_speed
+            cache_entry.icon = icon
             cache_entry.cached_at = datetime.utcnow()
         else:
-            # Create new
             new_cache = WeatherCache(
                 city=city,
-                temperature=weather_data["temp"],
-                humidity=weather_data["humidity"],
-                condition=weather_data["condition"],
-                wind_speed=weather_data["wind_speed"],
+                temp=temp,
+                humidity=humidity,
+                weather_main=weather_main,
+                weather_desc=weather_desc,
+                wind_speed=wind_speed,
+                icon=icon,
             )
             db.add(new_cache)
 
         db.commit()
 
-        logger.info(f"Successfully fetched and cached weather for {city}")
-        return weather_data
+        return {
+            "city": city,
+            "temp": temp,
+            "humidity": humidity,
+            "weather": weather_main,
+            "description": weather_desc,
+            "wind_speed": wind_speed,
+            "icon": icon,
+        }
 
-    except requests.Timeout:
+    except httpx.TimeoutException:
         logger.error(f"Weather API request timed out for {city}")
-        # If API times out but we have stale cache, return that
         if cache_entry:
-            logger.warning(f"Returning stale cache for {city} due to timeout")
             return {
                 "city": cache_entry.city,
-                "temp": cache_entry.temperature,
-                "temperature": cache_entry.temperature,
-                "condition": cache_entry.condition,
-                "weather": cache_entry.condition,
+                "temp": cache_entry.temp,
                 "humidity": cache_entry.humidity,
+                "weather": cache_entry.weather_main,
+                "description": cache_entry.weather_desc,
                 "wind_speed": cache_entry.wind_speed,
+                "icon": cache_entry.icon,
                 "cached": True,
                 "stale": True,
             }
         return {"error": "Weather service request timed out"}
         
-    except requests.RequestException as e:
+    except httpx.RequestError as e:
         logger.error(f"Weather API request failed for {city}: {e}")
-        # If API fails but we have stale cache, might be better to return that than error
         if cache_entry:
-            logger.warning(f"Returning stale cache for {city} due to API failure")
             return {
                 "city": cache_entry.city,
-                "temp": cache_entry.temperature,
-                "temperature": cache_entry.temperature,
-                "condition": cache_entry.condition,
-                "weather": cache_entry.condition,
+                "temp": cache_entry.temp,
                 "humidity": cache_entry.humidity,
+                "weather": cache_entry.weather_main,
+                "description": cache_entry.weather_desc,
                 "wind_speed": cache_entry.wind_speed,
+                "icon": cache_entry.icon,
                 "cached": True,
                 "stale": True,
             }
@@ -145,25 +153,22 @@ def get_weather(db: Session, city: str) -> dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Weather API request failed for {city}: {e}")
-        # If API fails but we have stale cache, might be better to return that than error
         if cache_entry:
-            logger.warning(f"Returning stale cache for {city} due to API failure")
             return {
                 "city": cache_entry.city,
-                "temp": cache_entry.temperature,
-                "temperature": cache_entry.temperature,  # Alias for compatibility
-                "condition": cache_entry.condition,
-                "weather": cache_entry.condition,  # Alias for compatibility
+                "temp": cache_entry.temp,
                 "humidity": cache_entry.humidity,
+                "weather": cache_entry.weather_main,
+                "description": cache_entry.weather_desc,
                 "wind_speed": cache_entry.wind_speed,
+                "icon": cache_entry.icon,
                 "cached": True,
                 "stale": True,
             }
-
         return {"error": "Unable to fetch weather data"}
 
 
-def get_weather_forecast(db: Session, city: str) -> dict[str, Any]:
+async def get_weather_forecast(db: Session, city: str) -> dict[str, Any]:
     """Get 5-day weather forecast for a city with caching
 
     Args:
@@ -215,7 +220,8 @@ def get_weather_forecast(db: Session, city: str) -> dict[str, Any]:
 
     try:
         url = f"http://api.openweathermap.org/data/2.5/forecast?q={city}&appid={settings.OPENWEATHER_KEY}&units=metric"
-        response = requests.get(url, timeout=10)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=10)
         data = response.json()
 
         if data.get("cod") != "200":

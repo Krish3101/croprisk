@@ -60,7 +60,7 @@ export const cropsApi = {
     add: (data) => api.post(API_CONFIG.ENDPOINTS.CROPS.ADD, data),
     updateStage: ({ cropId, stage }) => 
         api.patch(`${API_CONFIG.ENDPOINTS.CROPS.DELETE}/${cropId}/stage`, { stage }),
-    delete: (cropId) => api.post(`${API_CONFIG.ENDPOINTS.CROPS.DELETE}/delete`, { id: cropId }),
+    delete: (cropId) => api.delete(`${API_CONFIG.ENDPOINTS.CROPS.DELETE}/${cropId}`),
 };
 
 export const expensesApi = {

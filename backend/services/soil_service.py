@@ -15,11 +15,12 @@ from utils.helpers import StorageError
 logger = get_logger(__name__)
 
 
-def get_all_soil_reports(db: Session) -> list[dict[str, Any]]:
+def get_all_soil_reports(db: Session, user_id: int) -> list[dict[str, Any]]:
     """Get all soil reports from database
 
     Args:
         db: Database session
+        user_id: User ID
 
     Returns:
         List of soil report dictionaries
@@ -28,7 +29,7 @@ def get_all_soil_reports(db: Session) -> list[dict[str, Any]]:
     logger.info("Fetching all soil reports")
 
     try:
-        reports = db.query(SoilReport).order_by(desc(SoilReport.created_at)).all()
+        reports = db.query(SoilReport).filter(SoilReport.user_id == user_id).order_by(desc(SoilReport.created_at)).all()
 
         return [
             {
@@ -48,11 +49,12 @@ def get_all_soil_reports(db: Session) -> list[dict[str, Any]]:
         return []
 
 
-def get_soil_report(db: Session, field: str = "default") -> dict[str, Any]:
+def get_soil_report(db: Session, user_id: int, field: str = "default") -> dict[str, Any]:
     """Get soil health report for a specific field
 
     Args:
         db: Database session
+        user_id: User ID
         field: Field name (default: "default")
 
     Returns:
@@ -63,7 +65,7 @@ def get_soil_report(db: Session, field: str = "default") -> dict[str, Any]:
 
     try:
         # Get the most recent report for the field
-        report = db.query(SoilReport).filter(SoilReport.field == field).order_by(desc(SoilReport.created_at)).first()
+        report = db.query(SoilReport).filter(SoilReport.field == field, SoilReport.user_id == user_id).order_by(desc(SoilReport.created_at)).first()
 
         if report:
             return {
@@ -87,6 +89,7 @@ def get_soil_report(db: Session, field: str = "default") -> dict[str, Any]:
 
 def add_soil_report(
     db: Session,
+    user_id: int,
     nitrogen: float,
     phosphorus: float,
     potassium: float,
@@ -98,6 +101,7 @@ def add_soil_report(
 
     Args:
         db: Database session
+        user_id: User ID
         nitrogen: Nitrogen level
         phosphorus: Phosphorus level
         potassium: Potassium level
@@ -109,10 +113,11 @@ def add_soil_report(
         Dictionary with status and saved data
 
     """
-    logger.info(f"Adding soil report for location: {location}")
+    logger.info(f"Adding soil report for location: {location} for user {user_id}")
 
     try:
         new_report = SoilReport(
+            user_id=user_id,
             field=location,
             ph=float(ph),
             nitrogen=float(nitrogen),

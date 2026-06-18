@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from config import get_logger, settings
-from models.database import get_db
+from models.database import get_db, User
+from utils.helpers import get_current_active_user
 from services.weather_service import get_weather as get_weather_service
 from services.weather_service import get_weather_forecast as get_weather_forecast_service
 
@@ -15,7 +16,7 @@ router = APIRouter()
 
 
 @router.get("/weather", response_model=None)
-def get_weather(city: str = Query(None, description="City name"), db: Session = Depends(get_db)) -> dict[str, Any]:
+async def get_weather(city: str = Query(None, description="City name"), db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> dict[str, Any]:
     """Get weather information for a specific city."""
     # Use config default if not provided
     city = city.strip() if city else settings.DEFAULT_CITY
@@ -31,12 +32,12 @@ def get_weather(city: str = Query(None, description="City name"), db: Session = 
         return {"error": "Invalid city name"}
 
     logger.info(f"Weather endpoint called for city: {city}")
-    return get_weather_service(db, city)
+    return await get_weather_service(db, city)
 
 
 @router.get("/weather/forecast", response_model=None)
-def get_weather_forecast(
-    city: str = Query(None, description="City name"), db: Session = Depends(get_db)
+async def get_weather_forecast(
+    city: str = Query(None, description="City name"), db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> dict[str, Any]:
     """Get 5-day weather forecast for a specific city."""
     # Use config default if not provided
@@ -53,4 +54,4 @@ def get_weather_forecast(
         return {"error": "Invalid city name"}
 
     logger.info(f"Weather forecast endpoint called for city: {city}")
-    return get_weather_forecast_service(db, city)
+    return await get_weather_forecast_service(db, city)

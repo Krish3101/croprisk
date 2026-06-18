@@ -1,7 +1,0 @@
-[
-  { "city": "Pune", "temp": 24, "humidity": 62, "weather": "clear sky" },
-  { "city": "Mumbai", "temp": 28, "humidity": 75, "weather": "haze" },
-  { "city": "Delhi", "temp": 22, "humidity": 40, "weather": "smoke" },
-  { "city": "Bengaluru", "temp": 23, "humidity": 68, "weather": "light rain" },
-  { "city": "default", "temp": 25, "humidity": 60, "weather": "scattered clouds" }
-]

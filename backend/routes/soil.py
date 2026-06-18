@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from config import get_logger
-from models.database import get_db
+from models.database import get_db, User
 from models.schemas import SoilReportCreate
+from utils.helpers import get_current_active_user
 from services.soil_service import add_soil_report, get_all_soil_reports
 
 logger = get_logger(__name__)
@@ -15,24 +16,25 @@ router = APIRouter()
 
 
 @router.get("/soil", response_model=None)
-def get_soil(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+def get_soil(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> list[dict[str, Any]]:
     """Get all soil reports."""
     logger.info("Soil endpoint called")
     try:
-        return get_all_soil_reports(db)
+        return get_all_soil_reports(db, user_id=current_user.id)
     except Exception as e:
         logger.error(f"Failed to fetch soil reports: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch soil reports")
 
 
 @router.post("/soil/add", response_model=None)
-def add_soil(soil_data: SoilReportCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
+def add_soil(soil_data: SoilReportCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> dict[str, Any]:
     """Add a new soil report."""
     logger.info(f"Adding soil report for location: {soil_data.location}")
 
     try:
         return add_soil_report(
             db,
+            user_id=current_user.id,
             nitrogen=soil_data.nitrogen,
             phosphorus=soil_data.phosphorus,
             potassium=soil_data.potassium,

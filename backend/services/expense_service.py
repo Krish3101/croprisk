@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 
 def add_expense(
     db: Session, 
+    user_id: int,
     title: str, 
     amount: float, 
     transaction_type: str, 
@@ -28,6 +29,7 @@ def add_expense(
 
     Args:
         db: Database session
+        user_id: User ID
         title: Transaction title/description
         amount: Transaction amount
         transaction_type: Transaction type ("income" or "expense")
@@ -40,21 +42,22 @@ def add_expense(
     """
     from models.database import Crop
 
-    logger.info(f"Adding {transaction_type}: {title} - ₹{amount}" + (f" (linked to crop {crop_id})" if crop_id else ""))
+    logger.info(f"Adding {transaction_type}: {title} - ₹{amount} for user {user_id}" + (f" (linked to crop {crop_id})" if crop_id else ""))
 
     try:
-        # Validate crop_id exists if provided
+        # Validate crop_id exists and belongs to user if provided
         if crop_id is not None:
-            crop = db.query(Crop).filter(Crop.id == crop_id).first()
+            crop = db.query(Crop).filter(Crop.id == crop_id, Crop.user_id == user_id).first()
             if not crop:
-                logger.warning(f"Crop with ID {crop_id} not found")
-                raise StorageError(f"Crop with ID {crop_id} does not exist")
+                logger.warning(f"Crop with ID {crop_id} not found or access denied")
+                raise StorageError(f"Crop with ID {crop_id} does not exist or access denied")
 
         # Convert and format date
         ts = format_date_iso(date)
         formatted_date = format_date_display(date) if ts else date
 
         new_expense = Expense(
+            user_id=user_id,
             title=title,
             amount=float(amount),
             type=transaction_type,
@@ -89,11 +92,12 @@ def add_expense(
         raise StorageError(f"Failed to add expense: {e}") from e
 
 
-def get_expenses(db: Session) -> list[dict[str, Any]]:
+def get_expenses(db: Session, user_id: int) -> list[dict[str, Any]]:
     """Get all expenses sorted by date (latest first)
 
     Args:
         db: Database session
+        user_id: User ID
 
     Returns:
         List of expense dictionaries with crop information
@@ -105,7 +109,7 @@ def get_expenses(db: Session) -> list[dict[str, Any]]:
 
     try:
         # Use joinedload to avoid N+1 query problem
-        expenses = db.query(Expense).options(joinedload(Expense.crop)).order_by(desc(Expense.created_at)).all()
+        expenses = db.query(Expense).filter(Expense.user_id == user_id).options(joinedload(Expense.crop)).order_by(desc(Expense.created_at)).all()
 
         return [
             {
@@ -125,21 +129,22 @@ def get_expenses(db: Session) -> list[dict[str, Any]]:
         return []
 
 
-def delete_expense(db: Session, expense_id: int) -> dict[str, Any]:
+def delete_expense(db: Session, user_id: int, expense_id: int) -> dict[str, Any]:
     """Delete an expense by ID
 
     Args:
         db: Database session
+        user_id: User ID
         expense_id: ID of expense to delete
 
     Returns:
         Dictionary with status and deleted expense data
 
     """
-    logger.info(f"Deleting expense with ID: {expense_id}")
+    logger.info(f"Deleting expense with ID: {expense_id} for user {user_id}")
 
     try:
-        expense = db.query(Expense).filter(Expense.id == expense_id).first()
+        expense = db.query(Expense).filter(Expense.id == expense_id, Expense.user_id == user_id).first()
 
         if not expense:
             logger.warning(f"Expense not found with ID: {expense_id}")
@@ -160,11 +165,12 @@ def delete_expense(db: Session, expense_id: int) -> dict[str, Any]:
         raise StorageError(f"Failed to delete expense: {e}") from e
 
 
-def get_summary(db: Session) -> dict[str, float]:
+def get_summary(db: Session, user_id: int) -> dict[str, float]:
     """Get financial summary
 
     Args:
         db: Database session
+        user_id: User ID
 
     Returns:
         Dictionary with total_income, total_expense, and profit
@@ -174,8 +180,8 @@ def get_summary(db: Session) -> dict[str, float]:
 
     try:
         # Calculate totals using SQL aggregation
-        income = db.query(func.sum(Expense.amount)).filter(Expense.type == "income").scalar() or 0.0
-        expense = db.query(func.sum(Expense.amount)).filter(Expense.type == "expense").scalar() or 0.0
+        income = db.query(func.sum(Expense.amount)).filter(Expense.user_id == user_id, Expense.type == "income").scalar() or 0.0
+        expense = db.query(func.sum(Expense.amount)).filter(Expense.user_id == user_id, Expense.type == "expense").scalar() or 0.0
 
         profit = income - expense
 

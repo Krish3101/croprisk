@@ -7,8 +7,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from config import get_logger
-from models.database import get_db
+from models.database import get_db, User
 from models.schemas import CropCreate, CropStageUpdate
+from utils.helpers import get_current_active_user
 from services.crop_service import (
     add_crop as add_crop_service,
 )
@@ -26,39 +27,37 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-class CropDelete(BaseModel):
-    id: int = Field(..., ge=1)
 
 
 @router.get("/crops", response_model=None)
-def get_crops(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+def get_crops(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> list[dict[str, Any]]:
     """Get list of all tracked crops."""
     logger.info("Crops list endpoint called")
     try:
-        return get_crops_service(db)
+        return get_crops_service(db, user_id=current_user.id)
     except Exception as e:
         logger.error(f"Failed to fetch crops: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch crops")
 
 
 @router.post("/crops/add", response_model=None)
-def add_crop(crop_data: CropCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
+def add_crop(crop_data: CropCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> dict[str, Any]:
     """Add a new crop to track."""
     logger.info(f"Adding crop: {crop_data.crop} to plot: {crop_data.plot}")
     try:
-        return add_crop_service(db, crop_data.crop, crop_data.plot)
+        return add_crop_service(db, user_id=current_user.id, crop_name=crop_data.crop, plot=crop_data.plot)
     except Exception as e:
         logger.error(f"Failed to add crop: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to add crop")
 
 
-@router.post("/crops/delete", response_model=None)
-def delete_crop(delete_data: CropDelete, db: Session = Depends(get_db)) -> dict[str, Any]:
+@router.delete("/crops/{crop_id}", response_model=None)
+def delete_crop(crop_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> dict[str, Any]:
     """Delete a tracked crop."""
-    logger.info(f"Deleting crop with id: {delete_data.id}")
+    logger.info(f"Deleting crop with id: {crop_id}")
     try:
-        result = delete_crop_service(db, delete_data.id)
+        result = delete_crop_service(db, user_id=current_user.id, crop_id=crop_id)
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
         return result
@@ -71,11 +70,11 @@ def delete_crop(delete_data: CropDelete, db: Session = Depends(get_db)) -> dict[
 
 
 @router.patch("/crops/{crop_id}/stage", response_model=None)
-def update_stage(crop_id: int, stage_data: CropStageUpdate, db: Session = Depends(get_db)) -> dict[str, Any]:
+def update_stage(crop_id: int, stage_data: CropStageUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)) -> dict[str, Any]:
     """Update crop growth stage."""
     logger.info(f"Updating crop {crop_id} to stage: {stage_data.stage}")
     try:
-        result = update_crop_stage_service(db, crop_id, stage_data.stage)
+        result = update_crop_stage_service(db, user_id=current_user.id, crop_id=crop_id, stage=stage_data.stage)
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
         return result

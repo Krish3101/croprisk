@@ -45,6 +45,7 @@ class Crop(Base):
     __tablename__ = "crops"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     crop = Column(String(100), nullable=False, index=True)
     plot = Column(String(100), nullable=False)
     sown_date = Column(String(20))
@@ -55,6 +56,7 @@ class Crop(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationship
+    user = relationship("User", back_populates="crops")
     expenses = relationship("Expense", back_populates="crop")
 
 
@@ -62,6 +64,7 @@ class Expense(Base):
     __tablename__ = "expenses"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     title = Column(String(200), nullable=False)
     amount = Column(Float, nullable=False)
     type = Column(String(20), nullable=False, index=True)  # income or expense
@@ -72,6 +75,7 @@ class Expense(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationship
+    user = relationship("User", back_populates="expenses")
     crop = relationship("Crop", back_populates="expenses")
 
 
@@ -79,6 +83,7 @@ class SoilReport(Base):
     __tablename__ = "soil_reports"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     field = Column(String(100), nullable=False, index=True)
     ph = Column(Float, nullable=False)
     nitrogen = Column(Float, nullable=False)
@@ -89,6 +94,9 @@ class SoilReport(Base):
     last_tested = Column(String(20))
     notes = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationship
+    user = relationship("User", back_populates="soil_reports")
 
 
 class WeatherCache(Base):
@@ -140,6 +148,11 @@ class User(Base):
     hashed_password = Column(String(200), nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    crops = relationship("Crop", back_populates="user", cascade="all, delete-orphan")
+    expenses = relationship("Expense", back_populates="user", cascade="all, delete-orphan")
+    soil_reports = relationship("SoilReport", back_populates="user", cascade="all, delete-orphan")
 
 
 # Create all tables

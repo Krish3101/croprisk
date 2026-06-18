@@ -15,11 +15,12 @@ from utils.helpers import StorageError
 logger = get_logger(__name__)
 
 
-def add_crop(db: Session, crop_name: str, plot: str) -> dict[str, Any]:
+def add_crop(db: Session, user_id: int, crop_name: str, plot: str) -> dict[str, Any]:
     """Add a new crop to tracking
 
     Args:
         db: Database session
+        user_id: User ID
         crop_name: Crop name
         plot: Plot/field identifier
 
@@ -27,10 +28,10 @@ def add_crop(db: Session, crop_name: str, plot: str) -> dict[str, Any]:
         Dictionary with status and new crop data
 
     """
-    logger.info(f"Adding crop: {crop_name} to plot: {plot}")
+    logger.info(f"Adding crop: {crop_name} to plot: {plot} for user {user_id}")
 
     try:
-        new_crop = Crop(crop=crop_name, plot=plot, sown_date=datetime.now().strftime("%d %b %Y"), stage="Sown")
+        new_crop = Crop(user_id=user_id, crop=crop_name, plot=plot, sown_date=datetime.now().strftime("%d %b %Y"), stage="Sown")
 
         db.add(new_crop)
         db.commit()
@@ -55,21 +56,22 @@ def add_crop(db: Session, crop_name: str, plot: str) -> dict[str, Any]:
         raise StorageError(f"Failed to add crop: {e}") from e
 
 
-def delete_crop(db: Session, crop_id: int) -> dict[str, Any]:
+def delete_crop(db: Session, user_id: int, crop_id: int) -> dict[str, Any]:
     """Delete a crop by ID
 
     Args:
         db: Database session
+        user_id: User ID
         crop_id: ID of crop to delete
 
     Returns:
         Dictionary with status and deleted crop data
 
     """
-    logger.info(f"Deleting crop with ID: {crop_id}")
+    logger.info(f"Deleting crop with ID: {crop_id} for user {user_id}")
 
     try:
-        crop = db.query(Crop).filter(Crop.id == crop_id).first()
+        crop = db.query(Crop).filter(Crop.id == crop_id, Crop.user_id == user_id).first()
 
         if not crop:
             logger.warning(f"Crop not found with ID: {crop_id}")
@@ -90,11 +92,12 @@ def delete_crop(db: Session, crop_id: int) -> dict[str, Any]:
         raise StorageError(f"Failed to delete crop: {e}") from e
 
 
-def get_crops(db: Session) -> list[dict[str, Any]]:
+def get_crops(db: Session, user_id: int) -> list[dict[str, Any]]:
     """Get all tracked crops
 
     Args:
         db: Database session
+        user_id: User ID
 
     Returns:
         List of crops sorted newest first
@@ -103,7 +106,7 @@ def get_crops(db: Session) -> list[dict[str, Any]]:
     logger.info("Fetching all crops")
 
     try:
-        crops = db.query(Crop).order_by(desc(Crop.created_at)).all()
+        crops = db.query(Crop).filter(Crop.user_id == user_id).order_by(desc(Crop.created_at)).all()
 
         return [
             {
@@ -122,11 +125,12 @@ def get_crops(db: Session) -> list[dict[str, Any]]:
         return []
 
 
-def update_crop_stage(db: Session, crop_id: int, stage: str) -> dict[str, Any]:
+def update_crop_stage(db: Session, user_id: int, crop_id: int, stage: str) -> dict[str, Any]:
     """Update crop growth stage
 
     Args:
         db: Database session
+        user_id: User ID
         crop_id: ID of crop to update
         stage: New growth stage
 
@@ -137,7 +141,7 @@ def update_crop_stage(db: Session, crop_id: int, stage: str) -> dict[str, Any]:
     logger.info(f"Updating crop {crop_id} stage to: {stage}")
 
     try:
-        crop = db.query(Crop).filter(Crop.id == crop_id).first()
+        crop = db.query(Crop).filter(Crop.id == crop_id, Crop.user_id == user_id).first()
 
         if not crop:
             logger.warning(f"Crop not found with ID: {crop_id}")

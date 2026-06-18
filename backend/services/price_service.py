@@ -2,11 +2,10 @@
 Handles market price data retrieval with database caching
 """
 
-import random
 from datetime import datetime, timedelta
 from typing import Any
 
-import requests
+import httpx
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
@@ -16,28 +15,8 @@ from models.database import PriceCache
 logger = get_logger(__name__)
 
 
-def _generate_price_history(base_price: float) -> list[dict[str, Any]]:
-    """Generate simulated 7-day price history based on current price
-    (Since historical API might not be available)
-    """
-    history: list[dict[str, Any]] = []
-    try:
-        base = float(base_price)
-        today = datetime.now()
 
-        for i in range(6, -1, -1):
-            date = (today - timedelta(days=i)).strftime("%d %b")
-            # Random fluctuation within ±10%
-            price = int(base * (1 + random.uniform(-0.1, 0.1)))
-            history.append({"date": date, "price": price})
-
-    except (TypeError, ValueError):
-        pass
-
-    return history
-
-
-def get_market_price(db: Session, commodity: str, state: str = "Maharashtra") -> dict[str, Any]:
+async def get_market_price(db: Session, commodity: str, state: str = "Maharashtra") -> dict[str, Any]:
     """Get market price for a commodity with caching
 
     Args:
@@ -75,7 +54,6 @@ def get_market_price(db: Session, commodity: str, state: str = "Maharashtra") ->
                 "unit": cache_entry.unit,
                 "cached": True,
             }
-            result["history"] = _generate_price_history(result["modal_price"])
             return result
         else:
             logger.info(f"Price cache expired for {commodity}")
@@ -91,11 +69,10 @@ def get_market_price(db: Session, commodity: str, state: str = "Maharashtra") ->
             "&limit=1"
         )
 
-        response = requests.get(url, timeout=10)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=10)
 
         if response.status_code != 200:
-            if cache_entry:
-                return _return_stale_cache(cache_entry)
             return {"error": f"API returned status code {response.status_code}"}
 
         data = response.json()
@@ -140,37 +117,14 @@ def get_market_price(db: Session, commodity: str, state: str = "Maharashtra") ->
                 "arrival_date": arrival_date,
                 "unit": "Quintal",
             }
-            result["history"] = _generate_price_history(modal_price)
             return result
 
         else:
             logger.warning(f"No price records found for {commodity}")
-            if cache_entry:
-                return _return_stale_cache(cache_entry)
             return {"error": "No data found for this commodity"}
 
     except Exception as e:
         logger.error(f"Price API request failed: {e}")
-        if cache_entry:
-            return _return_stale_cache(cache_entry)
         return {"error": "Unable to fetch price data"}
 
 
-def _return_stale_cache(cache_entry: PriceCache) -> dict[str, Any]:
-    """Return stale cache data when API fails"""
-    logger.warning(f"Returning stale price cache for {cache_entry.crop}")
-    result = {
-        "crop": cache_entry.crop,
-        "state": cache_entry.state,
-        "modal_price": cache_entry.modal_price,
-        "min_price": cache_entry.min_price,
-        "max_price": cache_entry.max_price,
-        "market": "Stale Cache Market",
-        "district": "Stale Cache District",
-        "arrival_date": datetime.now().strftime("%d-%m-%Y"),
-        "unit": cache_entry.unit,
-        "cached": True,
-        "stale": True,
-    }
-    result["history"] = _generate_price_history(result["modal_price"])
-    return result

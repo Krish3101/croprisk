@@ -13,7 +13,6 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from config import get_logger, settings, setup_logging
-from middleware.performance import PerformanceMonitoringMiddleware
 from routes import auth, chatbot, crops, dashboard, expenses, prices, soil, weather
 
 # Setup logging
@@ -65,36 +64,8 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Performance monitoring
-app.add_middleware(PerformanceMonitoringMiddleware, slow_request_threshold=1.0)
+# Performance monitoring removed
 
-# Thread-safe rate limiting middleware
-from threading import Lock
-
-request_counts = {}
-rate_limit_lock = Lock()
-
-
-@app.middleware("http")
-async def rate_limit_middleware(request: Request, call_next):
-    """Rate limiting based on configuration settings"""
-    client_ip = request.client.host
-    current_minute = int(time.time() / 60)
-
-    key = f"{client_ip}:{current_minute}"
-
-    with rate_limit_lock:
-        # Clean old entries to prevent memory leak
-        if len(request_counts) > settings.RATE_LIMIT_CLEANUP_SIZE:
-            request_counts.clear()
-
-        request_counts[key] = request_counts.get(key, 0) + 1
-        current_count = request_counts[key]
-
-    if current_count > settings.RATE_LIMIT_PER_MINUTE:
-        return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded. Please try again later."})
-
-    response = await call_next(request)
-    return response
 
 
 # Include API routers

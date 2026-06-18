@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from config import get_logger, settings
-from models.database import get_db
+from models.database import get_db, User
+from utils.helpers import get_current_active_user
 from services.ai_service import generate_dashboard_insight
 from services.price_service import get_market_price
 from services.weather_service import get_weather
@@ -19,6 +20,7 @@ async def get_dashboard_insight(
     city: str = Query(None, description="City for weather"),
     crop: str = Query(None, description="Crop for price"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> dict[str, str]:
     """Get AI-generated insight for the dashboard."""
     # Use config defaults if not provided
