@@ -1,206 +1,95 @@
-import { useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { AlertCircle, ArrowRight, CloudRain, CloudSun, IndianRupee, Lightbulb, Sprout, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import api from '../services/api';
 
-import EmptyState from '../components/EmptyState';
-import InsightReport from '../components/InsightReport';
-import PageTransition from '../components/PageTransition';
-import { SkeletonCard, SkeletonDashboard } from '../components/SkeletonLoader';
-import { DEFAULTS } from '../constants';
-import { useAuth } from '../hooks/useAuth';
-import { useCrops, useDashboardInsight, useExpensesSummary, useWeather } from '../hooks/useApi';
+export default function Dashboard() {
+  const [plots, setPlots] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({ name: '', crop_type: '', location: '', growth_stage: '', sowing_date: '' });
 
-const DEFAULT_INSIGHT_CROP = 'Tomato';
-const MAX_CROPS_TO_DISPLAY = 3;
+  useEffect(() => { fetchPlots(); }, []);
 
-const Dashboard = () => {
-    const { user } = useAuth();
-    
-    // Use React Query hooks for data fetching
-    const { data: weather, isLoading: weatherLoading } = useWeather(DEFAULTS.CITY);
-    const { data: crops = [], isLoading: cropsLoading } = useCrops();
-    const { data: finance, isLoading: financeLoading } = useExpensesSummary();
-    const { data: insightData, isLoading: insightLoading, isError: insightError } = useDashboardInsight(DEFAULTS.CITY, DEFAULT_INSIGHT_CROP);
-    
-    const loading = weatherLoading || cropsLoading || financeLoading;
+  const fetchPlots = async () => {
+    const { data } = await api.get('/plots');
+    setPlots(data);
+  };
 
-    // Memoize animation variants
-    const container = useMemo(() => ({
-        hidden: { opacity: 0 },
-        show: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1
-            }
-        }
-    }), []);
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    await api.post('/plots', formData);
+    setShowForm(false);
+    setFormData({ name: '', crop_type: '', location: '', growth_stage: '', sowing_date: '' });
+    fetchPlots();
+  };
 
-    const item = useMemo(() => ({
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0 }
-    }), []);
-
-    if (loading) {
-        return (
-            <PageTransition>
-                <SkeletonDashboard />
-            </PageTransition>
-        );
+  const handleDelete = async (id) => {
+    if (confirm('Delete this plot?')) {
+      await api.delete(`/plots/${id}`);
+      fetchPlots();
     }
+  };
 
-    return (
-        <PageTransition>
-            <div className="space-y-8">
-                {/* Welcome Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-green-600 to-emerald-800 rounded-3xl p-8 text-white shadow-xl shadow-green-900/10 relative overflow-hidden"
-                >
-                    <div className="relative z-10">
-                        <h1 className="text-3xl font-bold mb-2">Welcome back, {user?.full_name || user?.username}!</h1>
-                        <p className="text-green-100">Here&apos;s what&apos;s happening on your farm today.</p>
-                    </div>
-                    <div className="absolute right-0 top-0 h-full w-1/3 bg-white/5 skew-x-12 transform translate-x-12"></div>
-                </motion.div>
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold">Your Plots</h2>
+        <button onClick={() => setShowForm(!showForm)} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          + Add Plot
+        </button>
+      </div>
 
-                <motion.div
-                    variants={container}
-                    initial="hidden"
-                    animate="show"
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                >
-                    {/* Weather Widget */}
-                    <motion.div variants={item} className="premium-card p-6 group">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-gray-900">Weather</h3>
-                            <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
-                                <CloudSun className="w-5 h-5 text-blue-500" />
-                            </div>
-                        </div>
-                        {weather && !weather.error ? (
-                            <div>
-                                <div className="flex items-end gap-2 mb-2">
-                                    <span className="text-4xl font-bold text-gray-900">
-                                        {Math.round(weather.temp || weather.temperature || 0)}°C
-                                    </span>
-                                    <span className="text-gray-500 mb-1">{weather.city || 'Unknown'}</span>
-                                </div>
-                                <p className="text-gray-600 capitalize">
-                                    {weather.condition || weather.weather || 'N/A'}
-                                </p>
-                                <div className="mt-4 flex gap-4 text-sm text-gray-500">
-                                    <span>Humidity: {weather.humidity || 0}%</span>
-                                    <span>Wind: {weather.wind_speed || 0} km/h</span>
-                                </div>
-                            </div>
-                        ) : (
-                            <p className="text-gray-500">Weather data unavailable</p>
-                        )}
-                        <Link to="/weather" className="mt-4 inline-flex items-center text-sm text-green-600 hover:text-green-700 font-medium group-hover:translate-x-1 transition-transform">
-                            View Forecast <ArrowRight className="w-4 h-4 ml-1" />
-                        </Link>
-                    </motion.div>
+      {showForm && (
+        <form onSubmit={handleCreate} className="bg-white p-6 rounded-lg shadow-md mb-8 grid grid-cols-2 gap-4">
+          <input placeholder="Plot Name" className="border p-2 rounded" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+          <input placeholder="Crop Type (e.g. Tomato)" className="border p-2 rounded" value={formData.crop_type} onChange={e => setFormData({...formData, crop_type: e.target.value})} required />
+          <input placeholder="City Location (e.g. Pune)" className="border p-2 rounded" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} required />
+          <input placeholder="Growth Stage (e.g. Flowering)" className="border p-2 rounded" value={formData.growth_stage} onChange={e => setFormData({...formData, growth_stage: e.target.value})} required />
+          <input type="date" className="border p-2 rounded" value={formData.sowing_date} onChange={e => setFormData({...formData, sowing_date: e.target.value})} required />
+          <button type="submit" className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 col-span-2">Save Plot</button>
+        </form>
+      )}
 
-                    {/* Crops Widget */}
-                    <motion.div variants={item} className="premium-card p-6 group">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-gray-900">Active Crops</h3>
-                            <div className="p-2 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors">
-                                <Sprout className="w-5 h-5 text-green-500" />
-                            </div>
-                        </div>
-                        <div className="space-y-3">
-                            {crops.slice(0, MAX_CROPS_TO_DISPLAY).map((crop) => (
-                                <div key={crop.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                    <div>
-                                        <div className="font-medium text-gray-900">{crop.crop}</div>
-                                        <div className="text-xs text-gray-500">{crop.plot}</div>
-                                    </div>
-                                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                                        {crop.stage}
-                                    </span>
-                                </div>
-                            ))}
-                            {crops.length === 0 && <p className="text-gray-500">No active crops</p>}
-                        </div>
-                        <Link to="/crops" className="mt-4 inline-flex items-center text-sm text-green-600 hover:text-green-700 font-medium group-hover:translate-x-1 transition-transform">
-                            Manage Crops <ArrowRight className="w-4 h-4 ml-1" />
-                        </Link>
-                    </motion.div>
-
-                    {/* Finance Widget */}
-                    <motion.div variants={item} className="premium-card p-6 group">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-gray-900">Finances</h3>
-                            <div className="p-2 bg-yellow-50 rounded-lg group-hover:bg-yellow-100 transition-colors">
-                                <IndianRupee className="w-5 h-5 text-yellow-500" />
-                            </div>
-                        </div>
-                        {finance && !finance.error ? (
-                            <div className="space-y-4">
-                                <div>
-                                    <div className="text-sm text-gray-500">Net Profit</div>
-                                    <div className={`text-2xl font-bold ${(finance.profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        ₹{(finance.profit || 0).toLocaleString()}
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-2 bg-green-50 rounded-lg">
-                                        <div className="text-xs text-green-600 mb-1 flex items-center gap-1">
-                                            <TrendingUp className="w-3 h-3" /> Income
-                                        </div>
-                                        <div className="font-semibold text-gray-900">₹{(finance.total_income || 0).toLocaleString()}</div>
-                                    </div>
-                                    <div className="p-2 bg-red-50 rounded-lg">
-                                        <div className="text-xs text-red-600 mb-1 flex items-center gap-1">
-                                            <TrendingUp className="w-3 h-3 rotate-180" /> Expense
-                                        </div>
-                                        <div className="font-semibold text-gray-900">₹{(finance.total_expense || 0).toLocaleString()}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <p className="text-gray-500">Financial data unavailable</p>
-                        )}
-                        <Link to="/finances" className="mt-4 inline-flex items-center text-sm text-green-600 hover:text-green-700 font-medium group-hover:translate-x-1 transition-transform">
-                            View Details <ArrowRight className="w-4 h-4 ml-1" />
-                        </Link>
-                    </motion.div>
-
-                    {/* AI Insights Widget */}
-                    <motion.div variants={item} className="premium-card p-6 group lg:col-span-3">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-gray-900">AI Insights</h3>
-                            <div className="p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
-                                <Lightbulb className="w-5 h-5 text-purple-500" />
-                            </div>
-                        </div>
-                        {insightLoading ? (
-                            <SkeletonCard />
-                        ) : insightError ? (
-                            <EmptyState
-                                icon={AlertCircle}
-                                title="Unable to load insights"
-                                description="AI insights are temporarily unavailable. Please try again later."
-                            />
-                        ) : insightData?.insight ? (
-                            <div className="space-y-4">
-                                <InsightReport insight={insightData.insight} />
-                            </div>
-                        ) : (
-                            <EmptyState
-                                icon={Lightbulb}
-                                title="No insights available"
-                                description="AI insights will appear here based on your farm data."
-                            />
-                        )}
-                    </motion.div>
-                </motion.div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {plots.map(plot => (
+          <div key={plot.id} className="bg-white rounded-lg shadow-md border overflow-hidden">
+            <div className={`p-4 border-b ${plot.latest_risk?.severity === 'HIGH' ? 'bg-red-50' : plot.latest_risk?.severity === 'MODERATE' ? 'bg-yellow-50' : plot.latest_risk?.severity === 'LOW' ? 'bg-green-50' : 'bg-gray-50'}`}>
+              <div className="flex justify-between items-start">
+                <h3 className="text-xl font-bold">{plot.name}</h3>
+                {plot.latest_risk && (
+                  <span className={`px-2 py-1 text-xs font-bold rounded ${plot.latest_risk.severity === 'HIGH' ? 'bg-red-200 text-red-800' : plot.latest_risk.severity === 'MODERATE' ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'}`}>
+                    {plot.latest_risk.severity} RISK
+                  </span>
+                )}
+              </div>
+              <p className="text-gray-600">{plot.crop_type} • {plot.location}</p>
             </div>
-        </PageTransition>
-    );
-};
-
-export default Dashboard;
+            <div className="p-4 text-sm space-y-2">
+              <p><strong>Stage:</strong> {plot.growth_stage}</p>
+              {plot.latest_risk ? (
+                <>
+                  <p><strong>Risk Score:</strong> {plot.latest_risk.risk_score}/100</p>
+                  <p className="text-gray-700 italic truncate">"{plot.latest_risk.primary_risk}"</p>
+                </>
+              ) : (
+                <p className="text-gray-500 italic">No risk assessment generated yet.</p>
+              )}
+            </div>
+            <div className="p-4 bg-gray-50 border-t flex gap-2">
+              <Link to={`/plots/${plot.id}`} className="flex-1 text-center bg-green-100 text-green-700 py-2 rounded hover:bg-green-200 font-medium">
+                View Risk Report
+              </Link>
+              <button onClick={() => handleDelete(plot.id)} className="bg-red-100 text-red-700 px-3 py-2 rounded hover:bg-red-200">
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+        {plots.length === 0 && !showForm && (
+          <div className="col-span-full text-center py-12 text-gray-500">
+            No plots registered. Add a plot to start tracking crop risks.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

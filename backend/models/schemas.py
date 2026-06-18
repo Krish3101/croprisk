@@ -1,82 +1,58 @@
-"""Pydantic Schemas
-Data Transfer Objects (DTOs) for API requests and responses
-"""
-
+from pydantic import BaseModel, EmailStr
+from typing import Optional
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field, validator
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    username: str | None = None
-
-
-class User(BaseModel):
-    username: str
-    email: str | None = None
-    full_name: str | None = None
-    disabled: bool | None = None
-
-
-class UserInDB(User):
-    hashed_password: str
-
-
-class UserRegister(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
-    password: str = Field(..., min_length=6, max_length=128)
+class UserCreate(BaseModel):
     email: EmailStr
-    full_name: str = Field(..., min_length=2, max_length=200)
+    password: str
 
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
 
-class ExpenseCreate(BaseModel):
-    title: str = Field(..., min_length=2, max_length=200)
-    amount: float = Field(..., gt=0, le=10000000)
-    type: str = Field(..., pattern=r"^(income|expense)$")
-    date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$")
-    category: str | None = Field(None, max_length=100)
-    description: str | None = Field(None, max_length=1000)
-    crop_id: int | None = Field(None, ge=1)
+class PlotCreate(BaseModel):
+    name: str
+    crop_type: str
+    location: str
+    growth_stage: str
+    sowing_date: str
 
-    @validator("date")
-    def validate_date(cls, v):
-        try:
-            datetime.strptime(v, "%Y-%m-%d")
-            return v
-        except ValueError:
-            raise ValueError("Date must be in YYYY-MM-DD format")
+class PlotUpdate(BaseModel):
+    name: Optional[str] = None
+    crop_type: Optional[str] = None
+    location: Optional[str] = None
+    growth_stage: Optional[str] = None
+    sowing_date: Optional[str] = None
 
+class RiskAssessmentResponse(BaseModel):
+    id: int
+    plot_id: int
+    risk_score: int
+    severity: str
+    primary_risk: str | None
+    analysis: str
+    recommendation: str
+    weather_summary: str | None = None
+    created_at: datetime
 
-class CropCreate(BaseModel):
-    crop: str = Field(..., min_length=2, max_length=100)
-    plot: str = Field(..., min_length=2, max_length=100)
+    class Config:
+        from_attributes = True
 
-    @validator("crop", "plot")
-    def validate_no_special_chars(cls, v):
-        if not v.replace(" ", "").replace("-", "").replace("_", "").isalnum():
-            raise ValueError("Only alphanumeric characters, spaces, hyphens, and underscores allowed")
-        return v.strip()
+class PlotResponse(BaseModel):
+    id: int
+    name: str
+    crop_type: str
+    location: str
+    growth_stage: str
+    sowing_date: str
+    created_at: datetime
 
+    class Config:
+        from_attributes = True
 
-class CropStageUpdate(BaseModel):
-    stage: str = Field(..., min_length=2, max_length=50)
-
-
-class SoilReportCreate(BaseModel):
-    nitrogen: float = Field(..., ge=0, le=1000, description="Nitrogen in kg/ha")
-    phosphorus: float = Field(..., ge=0, le=1000, description="Phosphorus in kg/ha")
-    potassium: float = Field(..., ge=0, le=1000, description="Potassium in kg/ha")
-    ph: float = Field(..., ge=0, le=14, description="pH level")
-    moisture: float = Field(..., ge=0, le=100, description="Moisture percentage")
-    location: str | None = Field("default", max_length=100)
-
-    @validator("location")
-    def validate_location(cls, v):
-        if v:
-            return v.strip()
-        return "default"
+class PlotWithRiskResponse(PlotResponse):
+    latest_risk: Optional[RiskAssessmentResponse] = None

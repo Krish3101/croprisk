@@ -1,92 +1,39 @@
-import { lazy, Suspense } from 'react';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import PlotDetail from './pages/PlotDetail';
 
-import ErrorBoundary from './components/ErrorBoundary';
-import Layout from './components/Layout';
-import ProtectedRoute from './components/ProtectedRoute';
-import { AuthProvider } from './context/AuthContext';
-import { queryClient } from './lib/queryClient';
-
-// Lazy load pages for code splitting
-const Crops = lazy(() => import('./pages/Crops'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Finances = lazy(() => import('./pages/Finances'));
-const Login = lazy(() => import('./pages/Login'));
-const Prices = lazy(() => import('./pages/Prices'));
-const Register = lazy(() => import('./pages/Register'));
-const Soil = lazy(() => import('./pages/Soil'));
-const Weather = lazy(() => import('./pages/Weather'));
-
-// Loading component
-const LoadingFallback = () => (
-    <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-    </div>
-);
+const PrivateRoute = ({ children }) => {
+  return localStorage.getItem('token') ? children : <Navigate to="/login" />;
+};
 
 function App() {
-    return (
-        <ErrorBoundary>
-            <QueryClientProvider client={queryClient}>
-                <AuthProvider>
-                    <Router>
-                        <Suspense fallback={<LoadingFallback />}>
-                            <Routes>
-                        {/* Public Routes */}
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-
-                    {/* Protected Routes */}
-                    <Route path="/" element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Dashboard />
-                            </Layout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/weather" element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Weather />
-                            </Layout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/crops" element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Crops />
-                            </Layout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/finances" element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Finances />
-                            </Layout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/prices" element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Prices />
-                            </Layout>
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/soil" element={
-                        <ProtectedRoute>
-                            <Layout>
-                                <Soil />
-                            </Layout>
-                        </ProtectedRoute>
-                    } />
-                        </Routes>
-                    </Suspense>
-                </Router>
-            </AuthProvider>
-        </QueryClientProvider>
-        </ErrorBoundary>
-    );
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-50 text-gray-900">
+        <header className="bg-green-700 text-white shadow-md p-4">
+          <div className="container mx-auto flex justify-between items-center">
+            <h1 className="text-2xl font-bold">KisanAI Risk Intelligence V2</h1>
+            {localStorage.getItem('token') && (
+              <button 
+                onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }}
+                className="text-sm bg-green-800 px-3 py-1 rounded hover:bg-green-900"
+              >
+                Logout
+              </button>
+            )}
+          </div>
+        </header>
+        <main className="container mx-auto p-4 py-8">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/plots/:id" element={<PrivateRoute><PlotDetail /></PrivateRoute>} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
+  );
 }
 
 export default App;

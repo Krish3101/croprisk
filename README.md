@@ -1,80 +1,63 @@
-# KisanAI - Smart Farming Assistant (V3)
+# KisanAI Risk Intelligence Platform V2
 
-KisanAI is a full-stack platform providing weather forecasts, market prices, and farming assistance tools for modern agriculture. This **Version 3** is optimized and strictly contains what's necessary to confidently run the code. 
-
----
-
-## 🔧 Prerequisites Check
-
-You need **Python (Backend)** and **Node.js (Frontend)** installed. Open your terminal (PowerShell or Command Prompt) and run these commands to check if you have them:
-
-```powershell
-python --version   # Expected: Python 3.11 or higher
-node -v          # Expected: v18.0.0 or higher
-npm -v           # Expected: v9.0.0 or higher
-```
-
-### What if they aren't installed?
-If any of these commands fail, install them quickly using the Windows Package Manager (`winget`) by pasting these commands into PowerShell, or by visiting their official websites:
-
-**Install Python & Node:**
-```powershell
-winget install -e --id Python.Python.3.11
-winget install -e --id OpenJS.NodeJS
-```
-*(After installing, close and reopen your terminal)*
+KisanAI Risk Intelligence Platform is an AI-driven web application designed to help farmers identify crop risks early. Unlike generic dashboards, this V2 focuses exclusively on predictive agronomy—correlating specific crop growth stages with 5-day weather forecasts to generate actionable risk assessments.
 
 ---
 
-## 🚀 How to Run
+## 🎯 Core Problem Solved
+Generic weather apps say "It will rain." KisanAI says "It will rain, and your Tomatoes in the Flowering stage are at 85% risk for Late Blight. Apply fungicide today."
 
-Open two separate terminal windows (PowerShell or Command Prompt). Make sure both are opened in your `kisan-ai` folder.
+## 🚀 Features
+- **Plot Management:** Track multiple plots by crop type, location, and growth stage.
+- **Deterministic Risk Engine:** A rule-based scoring engine (0-100) evaluating Heavy Rain, High Humidity, Extreme Temps, and Storm Conditions.
+- **AI Risk Analysis:** Structured, actionable explanations using OpenRouter LLM based purely on deterministic scores.
+- **Triage Dashboard:** A clean UI prioritizing plots by risk severity (LOW, MODERATE, HIGH).
+- **Secure Architecture:** Multi-tenant FastAPI backend with JWT-protected data isolation.
 
-**Terminal 1 (Backend):**
-```powershell
+---
+
+## ⚙️ Tech Stack
+- **Backend:** Python 3.11, FastAPI, SQLAlchemy, SQLite
+- **Frontend:** React 19, Vite, Tailwind CSS v4
+- **External APIs:** OpenWeatherMap, OpenRouter
+
+---
+
+## 🔧 Setup & Installation
+
+### 1. Environment Configuration
+Create a `.env` file in the `backend/` directory:
+```env
+# backend/.env
+SECRET_KEY=your_super_secret_jwt_key
+OPENWEATHER_KEY=your_openweather_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+### 2. Start Backend
+```bash
 cd backend
-.\.venv\Scripts\activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-**Terminal 2 (Frontend):**
-```powershell
+### 3. Start Frontend
+Open a new terminal:
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Once running:
-- **Frontend App:** http://localhost:5173
-- **Backend API:** http://localhost:8000
-- **API Documentation:** http://localhost:8000/docs
+Visit `http://localhost:5173` to view the application.
 
 ---
 
-## 📁 Project Structure
-
+## 🧪 Testing
+The backend is covered by an automated integration suite (`pytest`) testing authentication, authorization, and data isolation.
+```bash
+cd backend
+PYTHONPATH=. pytest tests/
 ```
-kisan-ai/
-├── backend/          # FastAPI Python Server
-│   ├── main.py       # API Entry Point
-│   ├── routes/       # API Endpoints
-│   ├── models/       # Database Models
-│   └── requirements.txt
-├── frontend/         # React + Vite Client
-│   ├── src/          # Source Code
-│   ├── package.json  # Dependencies
-│   └── vite.config.js
-├── README.md         # You are here
-└── .gitignore        # Clean commit rules
-```
-
----
-
-## 🛠️ Modifying the Code
-
-The codebase has been refactored to be extremely easy to understand.
-- Need to change the UI? Jump into `frontend/src/pages/` or `frontend/src/components/`.
-- Need to add a new API capability? Add a route in `backend/routes/` and link it to `backend/main.py`.
-
-Enjoy developing your Smart Farming Assistant!
