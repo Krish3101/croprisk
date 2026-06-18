@@ -1,6 +1,6 @@
 """Chatbot API Routes"""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, validator
 from sqlalchemy.orm import Session
 

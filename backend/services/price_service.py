@@ -2,7 +2,7 @@
 Handles market price data retrieval with database caching
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 import httpx

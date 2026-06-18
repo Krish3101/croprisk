@@ -5,7 +5,6 @@ pydantic>=2.0.0
 email-validator>=2.0.0
 
 # HTTP & Environment
-requests>=2.31.0
 httpx>=0.25.0
 python-dotenv>=1.0.0
 

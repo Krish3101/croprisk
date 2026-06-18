@@ -13,7 +13,6 @@ from services.expense_service import add_expense as add_expense_service
 from services.expense_service import delete_expense as delete_expense_service
 from services.expense_service import get_expenses as get_expenses_service
 from services.expense_service import get_summary as get_summary_service
-from utils.helpers import StorageError
 
 logger = get_logger(__name__)
 router = APIRouter()

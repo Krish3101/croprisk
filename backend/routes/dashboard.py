@@ -1,8 +1,7 @@
 """Dashboard API Routes"""
 
-from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from config import get_logger, settings

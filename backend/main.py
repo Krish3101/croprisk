@@ -2,7 +2,6 @@
 Main entry point for the REST API server
 """
 
-import time
 from contextlib import asynccontextmanager
 
 import uvicorn

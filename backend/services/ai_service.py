@@ -2,6 +2,8 @@
 Handles LLM communication, intent detection, query processing, and response formatting
 """
 
+import json
+
 from typing import Any
 
 import httpx
@@ -19,7 +21,6 @@ logger = get_logger(__name__)
 # ==================== LLM COMMUNICATION ====================
 
 
-import json
 
 async def ask_llm(prompt: str) -> str:
     """Send a prompt to the LLM and get a response
