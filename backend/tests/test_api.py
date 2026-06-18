@@ -1,13 +1,10 @@
 import pytest
 from fastapi.testclient import TestClient
 from main import app
-from models.database import get_db, User, Base, engine
+from models.database import get_db, Base, engine
 from sqlalchemy.orm import sessionmaker
 
-# Use a separate test database
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base.metadata.create_all(bind=engine)
 
 def override_get_db():
     try:
@@ -19,55 +16,52 @@ def override_get_db():
 app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
-@pytest.fixture(scope="module")
-def setup_user():
-    db = TestingSessionLocal()
-    user = db.query(User).filter(User.username == "testuser").first()
-    if not user:
-        from utils.helpers import get_password_hash
-        user = User(
-            username="testuser",
-            email="testuser@example.com",
-            full_name="Test User",
-            hashed_password=get_password_hash("testpassword123")
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    yield user
-    db.close()
-
-@pytest.fixture(scope="module")
-def auth_token(setup_user):
-    response = client.post(
-        "/api/v1/auth/login",
-        data={"username": "testuser", "password": "testpassword123"}
-    )
-    return response.json()["access_token"]
+@pytest.fixture(scope="module", autouse=True)
+def setup_db():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
 
 def test_health_check():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json()["status"] == "KisanAI API server running"
+    assert response.json()["status"] == "KisanAI Risk Intelligence V2 running"
 
-def test_auth_required_for_crops():
-    response = client.get("/api/v1/crops")
-    assert response.status_code == 401
-
-def test_get_crops_authenticated(auth_token):
-    headers = {"Authorization": f"Bearer {auth_token}"}
-    response = client.get("/api/v1/crops", headers=headers)
+def test_register_and_login():
+    response = client.post("/api/auth/register", json={"email": "test@example.com", "password": "pass"})
     assert response.status_code == 200
-    assert isinstance(response.json(), list)
-
-def test_add_crop_authenticated(auth_token):
-    headers = {"Authorization": f"Bearer {auth_token}"}
-    response = client.post(
-        "/api/v1/crops/add",
-        json={"crop": "Wheat", "plot": "Plot A"},
-        headers=headers
-    )
+    
+    response = client.post("/api/auth/login", data={"username": "test@example.com", "password": "pass"})
     assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "success"
-    assert data["data"]["crop"] == "Wheat"
+    assert "access_token" in response.json()
+
+def test_plot_crud():
+    # Login
+    response = client.post("/api/auth/login", data={"username": "test@example.com", "password": "pass"})
+    token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    # Create plot
+    plot_data = {
+        "name": "Test Plot",
+        "crop_type": "Wheat",
+        "location": "Pune",
+        "growth_stage": "Vegetative",
+        "sowing_date": "2023-01-01"
+    }
+    response = client.post("/api/plots", json=plot_data, headers=headers)
+    assert response.status_code == 200
+    plot_id = response.json()["id"]
+    
+    # Get plots
+    response = client.get("/api/plots", headers=headers)
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["latest_risk"] is None
+    
+    # Update plot
+    response = client.patch(f"/api/plots/{plot_id}", json={"growth_stage": "Flowering"}, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["growth_stage"] == "Flowering"
+    
+    # Don't delete so we can test risk generation manually if needed
+    

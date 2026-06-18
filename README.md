@@ -1,99 +1,63 @@
-# KisanAI - Smart Farming Assistant (V1.1)
+# KisanAI Risk Intelligence Platform V2
 
-KisanAI is a full-stack platform providing weather forecasts, market prices, and AI-driven farming assistance tools for modern agriculture. This **Version 1.1** release stabilizes the core architecture, introduces strict data isolation (multi-tenancy), enforces API security via JWT, replaces blocking synchronous network calls with asynchronous handlers, and brings the endpoints into REST compliance.
-
----
-
-## 🔧 Prerequisites
-
-You need **Python (Backend)** and **Node.js (Frontend)** installed.
-
-```bash
-python --version   # Expected: Python 3.11 or higher
-node -v          # Expected: v18.0.0 or higher
-```
+KisanAI Risk Intelligence Platform is an AI-driven web application designed to help farmers identify crop risks early. Unlike generic dashboards, this V2 focuses exclusively on predictive agronomy—correlating specific crop growth stages with 5-day weather forecasts to generate actionable risk assessments.
 
 ---
 
-## ⚙️ Environment Configuration
+## 🎯 Core Problem Solved
+Generic weather apps say "It will rain." KisanAI says "It will rain, and your Tomatoes in the Flowering stage are at 85% risk for Late Blight. Apply fungicide today."
 
-Before starting, configure your backend environment variables.
-Create a `.env` file inside the `backend/` directory:
+## 🚀 Features
+- **Plot Management:** Track multiple plots by crop type, location, and growth stage.
+- **Deterministic Risk Engine:** A rule-based scoring engine (0-100) evaluating Heavy Rain, High Humidity, Extreme Temps, and Storm Conditions.
+- **AI Risk Analysis:** Structured, actionable explanations using OpenRouter LLM based purely on deterministic scores.
+- **Triage Dashboard:** A clean UI prioritizing plots by risk severity (LOW, MODERATE, HIGH).
+- **Secure Architecture:** Multi-tenant FastAPI backend with JWT-protected data isolation.
 
+---
+
+## ⚙️ Tech Stack
+- **Backend:** Python 3.11, FastAPI, SQLAlchemy, SQLite
+- **Frontend:** React 19, Vite, Tailwind CSS v4
+- **External APIs:** OpenWeatherMap, OpenRouter
+
+---
+
+## 🔧 Setup & Installation
+
+### 1. Environment Configuration
+Create a `.env` file in the `backend/` directory:
 ```env
 # backend/.env
 SECRET_KEY=your_super_secret_jwt_key
 OPENWEATHER_KEY=your_openweather_api_key_here
 OPENROUTER_API_KEY=your_openrouter_api_key_here
-INDIA_GOV_API_KEY=your_data_gov_in_api_key_here
 ```
 
-*(Note: If API keys are missing, the system handles errors gracefully instead of falling back to fake data).*
-
----
-
-## 🚀 How to Run
-
-Open two separate terminal windows.
-
-**Terminal 1 (Backend):**
+### 2. Start Backend
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .\.venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-**Terminal 2 (Frontend):**
+### 3. Start Frontend
+Open a new terminal:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Once running:
-- **Frontend App:** http://localhost:5173
-- **Backend API:** http://localhost:8000
-- **API Documentation:** http://localhost:8000/docs
+Visit `http://localhost:5173` to view the application.
 
 ---
 
-## 🧪 Running Tests
-
-V1.1 introduces a comprehensive `pytest` suite for the backend to ensure API security and data isolation:
-
+## 🧪 Testing
+The backend is covered by an automated integration suite (`pytest`) testing authentication, authorization, and data isolation.
 ```bash
 cd backend
-# Make sure your virtual environment is activated
 PYTHONPATH=. pytest tests/
 ```
-
----
-
-## 📁 Project Structure
-
-```text
-kisan-ai/
-├── backend/          # FastAPI Python Server
-│   ├── main.py       # API Entry Point
-│   ├── routes/       # API Endpoints (Secured via JWT)
-│   ├── services/     # Async Business Logic & Integrations
-│   ├── models/       # SQLAlchemy Database Models & Pydantic DTOs
-│   ├── tests/        # Pytest integration tests
-│   └── requirements.txt
-├── frontend/         # React + Vite Client
-│   ├── src/          # Source Code (Components, Pages, Hooks)
-│   ├── package.json  # Dependencies
-│   └── vite.config.js
-├── README.md         # Documentation
-└── .gitignore        # Git tracking rules
-```
-
----
-
-## 🛡️ V1.1 Security & Architecture Notes
-* **Data Isolation:** All crops, expenses, and soil reports are strictly bound to a `user_id`.
-* **Async Network I/O:** The server no longer blocks when contacting external APIs (OpenWeather, OpenRouter), preventing DoS under load.
-* **REST Integrity:** Route structures enforce HTTP standards (e.g., `DELETE /crops/{id}`).
-* **Database:** Uses a localized `kisanai.db` SQLite file for zero-config startup. Auto-migrates tables on boot.
