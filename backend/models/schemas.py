@@ -42,6 +42,7 @@ class RiskAssessmentResponse(BaseModel):
     recommendation: str
     weather_summary: str | None = None
     created_at: datetime
+    is_stale: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

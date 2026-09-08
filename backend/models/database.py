@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, create_engine
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
 from config import settings
@@ -24,7 +24,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(200), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     plots = relationship("Plot", back_populates="user", cascade="all, delete-orphan")
 
@@ -37,9 +37,12 @@ class Plot(Base):
     name = Column(String(100), nullable=False)
     crop_type = Column(String(100), nullable=False)
     location = Column(String(100), nullable=False)  # City or region name
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
     growth_stage = Column(String(50), nullable=False)
     sowing_date = Column(String(20), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     user = relationship("User", back_populates="plots")
     risk_assessments = relationship(
@@ -58,7 +61,7 @@ class RiskAssessment(Base):
     analysis = Column(String, nullable=False)
     recommendation = Column(String, nullable=False)
     weather_summary = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     plot = relationship("Plot", back_populates="risk_assessments")
 

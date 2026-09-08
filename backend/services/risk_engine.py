@@ -5,72 +5,88 @@ from services.weather_service import get_forecast
 async def calculate_deterministic_risk(weather_data: dict) -> dict:
     """Calculate risk score strictly based on weather rules."""
     score = 0
-    risk_factors: list[tuple[int, str]] = []
-
-    # Extract upcoming 5 days data (list of 3-hour forecasts)
     forecasts = weather_data.get("list", [])
 
-    max_temp = -100
-    min_temp = 100
-    max_humidity = 0
-    heavy_rain_found = False
-    high_wind_found = False
+    heavy_precip = False
+    extreme_heat = False
+    frost_risk = False
+    high_wind = False
+    disease_pressure = False
 
+    # Check immediate simple thresholds
     for f in forecasts:
         temp = f.get("main", {}).get("temp", 25)
-        humidity = f.get("main", {}).get("humidity", 50)
-        rain = f.get("rain", {}).get("3h", 0)
-        wind = f.get("wind", {}).get("speed", 0)
+        wind_mps = f.get("wind", {}).get("speed", 0)
+        wind_kmh = wind_mps * 3.6
+        if temp > 35:
+            extreme_heat = True
+        if temp < 2:
+            frost_risk = True
+        if wind_kmh > 60:
+            high_wind = True
 
-        max_temp = max(max_temp, temp)
-        min_temp = min(min_temp, temp)
-        max_humidity = max(max_humidity, humidity)
+    # Check Heavy Precipitation (>50mm in 24h) using 8-block (24h) rolling windows
+    for i in range(len(forecasts) - 7):
+        window = forecasts[i : i + 8]
+        total_rain = sum(f.get("rain", {}).get("3h", 0) for f in window)
+        if total_rain > 50:
+            heavy_precip = True
+            break
 
-        if rain > 10:
-            heavy_rain_found = True
-        if wind > 10:
-            high_wind_found = True
+    # Check Disease Pressure (Humidity > 85% & Temp 20-30°C for > 12h) using 5-block (15h) rolling windows
+    for i in range(len(forecasts) - 4):
+        window = forecasts[i : i + 5]
+        if len(window) == 5 and all(
+            f.get("main", {}).get("humidity", 0) > 85 and 20 <= f.get("main", {}).get("temp", 0) <= 30
+            for f in window
+        ):
+            disease_pressure = True
+            break
 
-    # Rule evaluation
-    if heavy_rain_found:
-        score += 20
-        risk_factors.append((20, "Heavy Rain"))
+    triggered = []
 
-    if max_humidity > 85:
-        score += 15
-        risk_factors.append((15, "High Humidity"))
+    if heavy_precip:
+        triggered.append(("Heavy Precipitation", 40))
+    if extreme_heat:
+        triggered.append(("Extreme Heat", 35))
+    if frost_risk:
+        triggered.append(("Frost Risk", 40))
+    if high_wind:
+        triggered.append(("High Wind", 30))
+    if disease_pressure:
+        triggered.append(("Disease Pressure", 45))
 
-    if max_temp > 35 or min_temp < 5:
-        score += 15
-        risk_factors.append((15, "Extreme Temperature"))
+    for _, weight in triggered:
+        score += weight
 
-    if high_wind_found:
-        score += 25
-        risk_factors.append((25, "Storm Conditions"))
-
-    if max_humidity > 80 and 25 <= max_temp <= 30:
-        score += 25
-        risk_factors.append((25, "Disease-Prone Conditions"))
-
-    # Cap score at 100
     score = min(100, score)
 
-    if score < 30:
+    if score <= 30:
         severity = "LOW"
-    elif score <= 70:
+    elif score <= 65:
         severity = "MODERATE"
     else:
         severity = "HIGH"
 
-    primary_risk = max(risk_factors, key=lambda f: f[0])[1] if risk_factors else "None"
+    # Primary Threat Tie-Break Order: Frost Risk > Extreme Heat > High Wind > Heavy Precipitation > Disease Pressure
+    tie_break = {
+        "Frost Risk": 5,
+        "Extreme Heat": 4,
+        "High Wind": 3,
+        "Heavy Precipitation": 2,
+        "Disease Pressure": 1
+    }
 
-    weather_summary = (
-        f"Max Temp: {max_temp}C, Min Temp: {min_temp}C, Max Humidity: {max_humidity}%. "
-    )
-    if heavy_rain_found:
-        weather_summary += "Heavy rain expected. "
-    if high_wind_found:
-        weather_summary += "High winds expected. "
+    if not triggered:
+        primary_risk = "None"
+    else:
+        max_weight = max(w for _, w in triggered)
+        top_candidates = [t for t, w in triggered if w == max_weight]
+        primary_risk = max(top_candidates, key=lambda t: tie_break.get(t, 0))
+
+    weather_summary = "Forecast analysis complete."
+    if triggered:
+        weather_summary = "Triggered conditions: " + ", ".join(t for t, _ in triggered)
 
     return {
         "score": score,
@@ -80,8 +96,8 @@ async def calculate_deterministic_risk(weather_data: dict) -> dict:
     }
 
 
-async def generate_risk_assessment(crop: str, stage: str, city: str) -> dict:
-    weather_data = await get_forecast(city)
+async def generate_risk_assessment(crop: str, stage: str, lat: float, lon: float) -> dict:
+    weather_data = await get_forecast(lat, lon)
     risk_data = await calculate_deterministic_risk(weather_data)
 
     if risk_data["severity"] == "LOW" and risk_data["primary_risk"] == "None":

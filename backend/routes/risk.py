@@ -25,20 +25,14 @@ async def get_plot_risk(
         .first()
     )
 
-    # Check if we need to generate a new assessment (older than 12 hours)
-    created_at = (
-        (
-            latest_assessment.created_at
-            if latest_assessment and latest_assessment.created_at.tzinfo
-            else latest_assessment.created_at.replace(tzinfo=UTC)
-        )
-        if latest_assessment
-        else None
-    )
-    if not latest_assessment or datetime.now(UTC) - created_at > timedelta(hours=12):
+    # Check if we need to generate a new assessment (older than 12 hours or plot was updated)
+    def ensure_utc(dt):
+        return dt.replace(tzinfo=UTC) if dt and dt.tzinfo is None else dt
+
+    if not latest_assessment or ensure_utc(datetime.now(UTC)) - ensure_utc(latest_assessment.created_at) > timedelta(hours=12) or ensure_utc(latest_assessment.created_at) < ensure_utc(plot.updated_at):
         try:
             risk_data = await generate_risk_assessment(
-                plot.crop_type, plot.growth_stage, plot.location
+                plot.crop_type, plot.growth_stage, plot.lat, plot.lon
             )
             new_assessment = RiskAssessment(
                 plot_id=plot.id,
@@ -55,8 +49,11 @@ async def get_plot_risk(
             return new_assessment
         except HTTPException as e:
             # If API fails and we have a stale assessment, return it. Otherwise, bubble error.
-            if latest_assessment:
+            if latest_assessment and ensure_utc(latest_assessment.created_at) >= ensure_utc(plot.updated_at):
+                latest_assessment.is_stale = True
                 return latest_assessment
             raise e
 
+    # If it is valid and within freshness window
+    latest_assessment.is_stale = False
     return latest_assessment

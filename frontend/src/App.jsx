@@ -13,7 +13,7 @@ function App() {
       <div className="min-h-screen bg-gray-50 text-gray-900">
         <header className="bg-green-700 text-white shadow-md p-4">
           <div className="container mx-auto flex justify-between items-center">
-            <h1 className="text-2xl font-bold">KisanAI Risk Intelligence V2</h1>
+            <h1 className="text-2xl font-bold">KisanAI</h1>
             {localStorage.getItem('token') && (
               <button
                 onClick={() => {

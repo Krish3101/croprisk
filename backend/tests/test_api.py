@@ -29,7 +29,7 @@ def setup_db():
 def test_health_check():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json()["status"] == "KisanAI Risk Intelligence V2 running"
+    assert response.json()["status"] == "KisanAI running"
 
 
 def test_register_and_login():
@@ -61,7 +61,10 @@ def test_plot_crud():
         "growth_stage": "Vegetative",
         "sowing_date": "2023-01-01",
     }
-    response = client.post("/api/plots", json=plot_data, headers=headers)
+    from unittest.mock import patch
+    with patch("routes.plots.geocode_location") as mock_geo:
+        mock_geo.return_value = [{"lat": 18.52, "lon": 73.85}]
+        response = client.post("/api/plots", json=plot_data, headers=headers)
     assert response.status_code == 200
     plot_id = response.json()["id"]
 
@@ -71,11 +74,59 @@ def test_plot_crud():
     assert len(response.json()) == 1
     assert response.json()[0]["latest_risk"] is None
 
-    # Update plot
-    response = client.patch(
-        f"/api/plots/{plot_id}", json={"growth_stage": "Flowering"}, headers=headers
+    # Test Tenant Isolation
+    response_other = client.post(
+        "/api/auth/register", json={"email": "other@example.com", "password": "password123"}
     )
+    response_other = client.post(
+        "/api/auth/login", data={"username": "other@example.com", "password": "password123"}
+    )
+    token_other = response_other.json()["access_token"]
+    headers_other = {"Authorization": f"Bearer {token_other}"}
+
+    # Other user should see 0 plots
+    response = client.get("/api/plots", headers=headers_other)
+    assert len(response.json()) == 0
+
+    # Other user trying to access this plot should get 404
+    response = client.patch(
+        f"/api/plots/{plot_id}", json={"growth_stage": "Flowering"}, headers=headers_other
+    )
+    assert response.status_code == 404
+
+    # Update plot
+    with patch("routes.plots.geocode_location") as mock_geo:
+        mock_geo.return_value = [{"lat": 18.52, "lon": 73.85}]
+        response = client.patch(
+            f"/api/plots/{plot_id}", json={"growth_stage": "Flowering"}, headers=headers
+        )
     assert response.status_code == 200
     assert response.json()["growth_stage"] == "Flowering"
 
-    # Don't delete so we can test risk generation manually if needed
+    # Test assessment generation & invalidation
+    with patch("routes.risk.generate_risk_assessment") as mock_generate:
+        mock_generate.return_value = {
+            "risk_score": 10,
+            "severity": "LOW",
+            "primary_risk": "None",
+            "analysis": "Test analysis",
+            "recommendation": "Test recommendation",
+            "weather_summary": "Test summary"
+        }
+        res = client.get(f"/api/plots/{plot_id}/risk", headers=headers)
+        assert res.status_code == 200
+        assert res.json()["is_stale"] is False
+        assert mock_generate.call_count == 1
+
+        # Request again, should hit cache
+        res = client.get(f"/api/plots/{plot_id}/risk", headers=headers)
+        assert mock_generate.call_count == 1
+
+        # Update plot location, should invalidate cache
+        with patch("routes.plots.geocode_location") as mock_geo:
+            mock_geo.return_value = [{"lat": 19.0, "lon": 73.0}]
+            client.patch(f"/api/plots/{plot_id}", json={"location": "Mumbai"}, headers=headers)
+
+        # Request risk again, should generate new
+        res = client.get(f"/api/plots/{plot_id}/risk", headers=headers)
+        assert mock_generate.call_count == 2

@@ -13,7 +13,11 @@ async def ask_llm(prompt: str) -> str:
         "messages": [
             {
                 "role": "system",
-                "content": "You are KisanAI Risk Intelligence, an expert agronomist.",
+                "content": (
+                    "You explain crop risk assessments based on weather conditions and growth stages. "
+                    "Provide clear, direct agronomic context and exactly one recommended action. "
+                    "Do not provide pesticide dosages, treatment prescriptions, or guaranteed predictions."
+                ),
             },
             {"role": "user", "content": prompt},
         ],
@@ -26,7 +30,7 @@ async def ask_llm(prompt: str) -> str:
         "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://kisanai.com",
-        "X-Title": "KisanAI Risk Intelligence",
+        "X-Title": "KisanAI",
     }
 
     try:

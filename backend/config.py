@@ -5,12 +5,15 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
 
+# Load environment variables from backend/.env or root .env
 load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR.parent / ".env")
+
 
 
 class Settings:
-    PROJECT_NAME: str = "KisanAI Risk Intelligence"
-    VERSION: str = "2.0.0"
+    PROJECT_NAME: str = "KisanAI"
+    VERSION: str = "1.0.0"
 
     # Auth
     SECRET_KEY: str = os.environ["SECRET_KEY"]

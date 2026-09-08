@@ -13,7 +13,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="KisanAI Risk Intelligence V2", lifespan=lifespan)
+app = FastAPI(title="KisanAI", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,4 +30,4 @@ app.include_router(risk.router)
 
 @app.get("/")
 def health_check():
-    return {"status": "KisanAI Risk Intelligence V2 running"}
+    return {"status": "KisanAI running"}

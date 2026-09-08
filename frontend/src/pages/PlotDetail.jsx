@@ -25,7 +25,7 @@ export default function PlotDetail() {
   if (loading)
     return (
       <div className="text-center py-20 text-gray-600">
-        Generating AI Risk Analysis (Checking Weather & Agronomic Rules)...
+        Generating Risk Assessment (Checking Weather Forecast & Agronomic Rules)...
       </div>
     );
   if (error)
@@ -71,7 +71,7 @@ export default function PlotDetail() {
 
           <div className="bg-gray-50 p-4 rounded-lg border">
             <h3 className="text-sm uppercase tracking-wide text-gray-500 font-bold mb-2">
-              AI Agronomic Analysis
+              Agronomic Analysis
             </h3>
             <p className="text-gray-800 leading-relaxed">{risk.analysis}</p>
           </div>
@@ -87,6 +87,9 @@ export default function PlotDetail() {
 
           <div className="text-xs text-gray-400 text-right mt-4">
             Report Generated: {new Date(risk.created_at).toLocaleString()}
+            {risk.is_stale && (
+              <span className="ml-2 text-yellow-600 font-bold">(STALE - Using cached data due to service unavailability)</span>
+            )}
           </div>
         </div>
       </div>

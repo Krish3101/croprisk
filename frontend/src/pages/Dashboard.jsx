@@ -13,31 +13,28 @@ export default function Dashboard() {
     sowing_date: '',
   });
 
-  const fetchPlots = async () => {
-    const { data } = await api.get('/plots');
+  const fetchPlots = async (signal) => {
+    const { data } = await api.get('/plots', { signal });
     setPlots(data);
   };
 
   useEffect(() => {
-    let ignore = false;
-    const load = async () => {
-      const { data } = await api.get('/plots');
-      if (!ignore) {
-        setPlots(data);
-      }
-    };
-    load();
-    return () => {
-      ignore = true;
-    };
+    const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchPlots(controller.signal).catch(() => {});
+    return () => controller.abort();
   }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    await api.post('/plots', formData);
-    setShowForm(false);
-    setFormData({ name: '', crop_type: '', location: '', growth_stage: '', sowing_date: '' });
-    fetchPlots();
+    try {
+      await api.post('/plots', formData);
+      setShowForm(false);
+      setFormData({ name: '', crop_type: '', location: '', growth_stage: '', sowing_date: '' });
+      fetchPlots();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to create plot');
+    }
   };
 
   const handleDelete = async (id) => {
