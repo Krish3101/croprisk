@@ -4,7 +4,7 @@ from services.ai_service import explain_risk
 async def calculate_deterministic_risk(weather_data: dict) -> dict:
     """Calculate risk score strictly based on weather rules."""
     score = 0
-    risk_factors = []
+    risk_factors: list[tuple[int, str]] = []
     
     # Extract upcoming 5 days data (list of 3-hour forecasts)
     forecasts = weather_data.get("list", [])
@@ -33,23 +33,23 @@ async def calculate_deterministic_risk(weather_data: dict) -> dict:
     # Rule evaluation
     if heavy_rain_found:
         score += 20
-        risk_factors.append("Heavy Rain")
+        risk_factors.append((20, "Heavy Rain"))
         
     if max_humidity > 85:
         score += 15
-        risk_factors.append("High Humidity")
+        risk_factors.append((15, "High Humidity"))
         
     if max_temp > 35 or min_temp < 5:
         score += 15
-        risk_factors.append("Extreme Temperature")
+        risk_factors.append((15, "Extreme Temperature"))
         
     if high_wind_found:
         score += 25
-        risk_factors.append("Storm Conditions")
+        risk_factors.append((25, "Storm Conditions"))
         
     if max_humidity > 80 and 25 <= max_temp <= 30:
         score += 25
-        risk_factors.append("Disease-Prone Conditions")
+        risk_factors.append((25, "Disease-Prone Conditions"))
         
     # Cap score at 100
     score = min(100, score)
@@ -61,7 +61,7 @@ async def calculate_deterministic_risk(weather_data: dict) -> dict:
     else:
         severity = "HIGH"
         
-    primary_risk = risk_factors[-1] if risk_factors else "None"
+    primary_risk = max(risk_factors, key=lambda f: f[0])[1] if risk_factors else "None"
     
     weather_summary = f"Max Temp: {max_temp}C, Min Temp: {min_temp}C, Max Humidity: {max_humidity}%. "
     if heavy_rain_found:

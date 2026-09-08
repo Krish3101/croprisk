@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -6,7 +6,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from config import settings
 from sqlalchemy.orm import Session
-from models.database import get_db, User
+from models.database import get_db, User, Plot
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -21,7 +21,7 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=15))
+    expire = datetime.now(timezone.utc) + (expires_delta if expires_delta else timedelta(minutes=15))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 
@@ -42,3 +42,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+def get_owned_plot(plot_id: int, db: Session, current_user: User) -> Plot:
+    plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
+    if not plot:
+        raise HTTPException(status_code=404, detail="Plot not found")
+    return plot

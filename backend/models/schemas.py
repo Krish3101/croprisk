@@ -1,18 +1,17 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import Optional
 from datetime import datetime
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
 
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PlotCreate(BaseModel):
     name: str
@@ -39,8 +38,7 @@ class RiskAssessmentResponse(BaseModel):
     weather_summary: str | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PlotResponse(BaseModel):
     id: int
@@ -51,8 +49,7 @@ class PlotResponse(BaseModel):
     sowing_date: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PlotWithRiskResponse(PlotResponse):
     latest_risk: Optional[RiskAssessmentResponse] = None

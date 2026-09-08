@@ -11,7 +11,7 @@ class Settings:
     VERSION: str = "2.0.0"
     
     # Auth
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "default-insecure-key-change-it")
+    SECRET_KEY: str = os.environ["SECRET_KEY"]
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7 # 7 days
     
     # DB

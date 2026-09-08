@@ -1,9 +1,15 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from models.database import init_db
 from routes import auth, plots, risk
 
-app = FastAPI(title="KisanAI Risk Intelligence V2")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+app = FastAPI(title="KisanAI Risk Intelligence V2", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -12,10 +18,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-def on_startup():
-    init_db()
 
 app.include_router(auth.router)
 app.include_router(plots.router)

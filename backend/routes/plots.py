@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import List
 from models.database import get_db, User, Plot, RiskAssessment
 from models.schemas import PlotCreate, PlotUpdate, PlotResponse, PlotWithRiskResponse
-from utils.helpers import get_current_user
+from utils.helpers import get_current_user, get_owned_plot
 
 router = APIRouter(prefix="/api/plots", tags=["Plots"])
 
@@ -33,9 +33,7 @@ def create_plot(plot: PlotCreate, db: Session = Depends(get_db), current_user: U
 
 @router.patch("/{plot_id}", response_model=PlotResponse)
 def update_plot(plot_id: int, plot_update: PlotUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
-    if not db_plot:
-        raise HTTPException(status_code=404, detail="Plot not found")
+    db_plot = get_owned_plot(plot_id, db, current_user)
     
     update_data = plot_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -47,9 +45,7 @@ def update_plot(plot_id: int, plot_update: PlotUpdate, db: Session = Depends(get
 
 @router.delete("/{plot_id}")
 def delete_plot(plot_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    db_plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
-    if not db_plot:
-        raise HTTPException(status_code=404, detail="Plot not found")
+    db_plot = get_owned_plot(plot_id, db, current_user)
     db.delete(db_plot)
     db.commit()
     return {"status": "success", "message": "Plot deleted"}

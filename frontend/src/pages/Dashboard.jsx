@@ -7,12 +7,24 @@ export default function Dashboard() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', crop_type: '', location: '', growth_stage: '', sowing_date: '' });
 
-  useEffect(() => { fetchPlots(); }, []);
-
   const fetchPlots = async () => {
     const { data } = await api.get('/plots');
     setPlots(data);
   };
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      const { data } = await api.get('/plots');
+      if (!ignore) {
+        setPlots(data);
+      }
+    };
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();

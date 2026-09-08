@@ -27,16 +27,16 @@ def test_health_check():
     assert response.json()["status"] == "KisanAI Risk Intelligence V2 running"
 
 def test_register_and_login():
-    response = client.post("/api/auth/register", json={"email": "test@example.com", "password": "pass"})
+    response = client.post("/api/auth/register", json={"email": "test@example.com", "password": "password123"})
     assert response.status_code == 200
     
-    response = client.post("/api/auth/login", data={"username": "test@example.com", "password": "pass"})
+    response = client.post("/api/auth/login", data={"username": "test@example.com", "password": "password123"})
     assert response.status_code == 200
     assert "access_token" in response.json()
 
 def test_plot_crud():
     # Login
-    response = client.post("/api/auth/login", data={"username": "test@example.com", "password": "pass"})
+    response = client.post("/api/auth/login", data={"username": "test@example.com", "password": "password123"})
     token = response.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     

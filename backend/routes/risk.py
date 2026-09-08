@@ -3,22 +3,25 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from models.database import get_db, User, Plot, RiskAssessment
 from models.schemas import RiskAssessmentResponse
-from utils.helpers import get_current_user
+from utils.helpers import get_current_user, get_owned_plot
 from services.risk_engine import generate_risk_assessment
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 router = APIRouter(prefix="/api/plots", tags=["Risk Assessment"])
 
 @router.get("/{plot_id}/risk", response_model=RiskAssessmentResponse)
 async def get_plot_risk(plot_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
-    if not plot:
-        raise HTTPException(status_code=404, detail="Plot not found")
+    plot = get_owned_plot(plot_id, db, current_user)
         
     latest_assessment = db.query(RiskAssessment).filter(RiskAssessment.plot_id == plot_id).order_by(desc(RiskAssessment.created_at)).first()
     
     # Check if we need to generate a new assessment (older than 12 hours)
-    if not latest_assessment or datetime.utcnow() - latest_assessment.created_at > timedelta(hours=12):
+    created_at = (
+        latest_assessment.created_at
+        if latest_assessment and latest_assessment.created_at.tzinfo
+        else latest_assessment.created_at.replace(tzinfo=timezone.utc)
+    ) if latest_assessment else None
+    if not latest_assessment or datetime.now(timezone.utc) - created_at > timedelta(hours=12):
         try:
             risk_data = await generate_risk_assessment(plot.crop_type, plot.growth_stage, plot.location)
             new_assessment = RiskAssessment(
