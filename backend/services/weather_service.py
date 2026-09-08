@@ -1,7 +1,10 @@
-import httpx
 from typing import Any
-from config import settings
+
+import httpx
 from fastapi import HTTPException
+
+from config import settings
+
 
 async def get_forecast(city: str) -> dict[str, Any]:
     if not settings.OPENWEATHER_KEY:
@@ -20,7 +23,7 @@ async def get_forecast(city: str) -> dict[str, Any]:
         data = response.json()
         if data.get("cod") != "200":
             raise HTTPException(status_code=502, detail="Forecast data not available")
-        
+
         return data
     except httpx.RequestError:
         raise HTTPException(status_code=502, detail="Unable to connect to weather service")

@@ -1,11 +1,14 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, create_engine
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+
 from config import settings
 
 engine = create_engine(settings.DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 def get_db():
     db = SessionLocal()
@@ -14,15 +17,17 @@ def get_db():
     finally:
         db.close()
 
+
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(200), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     plots = relationship("Plot", back_populates="user", cascade="all, delete-orphan")
+
 
 class Plot(Base):
     __tablename__ = "plots"
@@ -34,10 +39,13 @@ class Plot(Base):
     location = Column(String(100), nullable=False)  # City or region name
     growth_stage = Column(String(50), nullable=False)
     sowing_date = Column(String(20), nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     user = relationship("User", back_populates="plots")
-    risk_assessments = relationship("RiskAssessment", back_populates="plot", cascade="all, delete-orphan")
+    risk_assessments = relationship(
+        "RiskAssessment", back_populates="plot", cascade="all, delete-orphan"
+    )
+
 
 class RiskAssessment(Base):
     __tablename__ = "risk_assessments"
@@ -50,9 +58,10 @@ class RiskAssessment(Base):
     analysis = Column(String, nullable=False)
     recommendation = Column(String, nullable=False)
     weather_summary = Column(String, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     plot = relationship("Plot", back_populates="risk_assessments")
+
 
 def init_db():
     Base.metadata.create_all(bind=engine)

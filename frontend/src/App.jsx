@@ -15,8 +15,11 @@ function App() {
           <div className="container mx-auto flex justify-between items-center">
             <h1 className="text-2xl font-bold">KisanAI Risk Intelligence V2</h1>
             {localStorage.getItem('token') && (
-              <button 
-                onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }}
+              <button
+                onClick={() => {
+                  localStorage.removeItem('token');
+                  window.location.href = '/login';
+                }}
                 className="text-sm bg-green-800 px-3 py-1 rounded hover:bg-green-900"
               >
                 Logout
@@ -27,8 +30,22 @@ function App() {
         <main className="container mx-auto p-4 py-8">
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/plots/:id" element={<PrivateRoute><PlotDetail /></PrivateRoute>} />
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/plots/:id"
+              element={
+                <PrivateRoute>
+                  <PlotDetail />
+                </PrivateRoute>
+              }
+            />
           </Routes>
         </main>
       </div>

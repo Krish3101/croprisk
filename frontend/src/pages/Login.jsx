@@ -22,11 +22,10 @@ export default function Login() {
         formData.append('username', email);
         formData.append('password', password);
         const { data } = await api.post('/auth/login', formData, {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         });
         localStorage.setItem('token', data.access_token);
         navigate('/');
-        
       }
     } catch (err) {
       setError(err.response?.data?.detail || 'An error occurred');
@@ -40,26 +39,36 @@ export default function Login() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1">Email</label>
-          <input 
-            type="email" 
+          <input
+            type="email"
             className="w-full p-2 border rounded"
-            value={email} onChange={e => setEmail(e.target.value)} required 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
           />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Password</label>
-          <input 
-            type="password" 
+          <input
+            type="password"
             className="w-full p-2 border rounded"
-            value={password} onChange={e => setPassword(e.target.value)} required 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
           />
         </div>
-        <button type="submit" className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700">
+        <button
+          type="submit"
+          className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700"
+        >
           {isRegister ? 'Create Account' : 'Sign In'}
         </button>
       </form>
-      <button 
-        onClick={() => {setIsRegister(!isRegister); setError('');}} 
+      <button
+        onClick={() => {
+          setIsRegister(!isRegister);
+          setError('');
+        }}
         className="w-full mt-4 text-sm text-gray-600 hover:text-green-600"
       >
         {isRegister ? 'Already have an account? Login' : "Don't have an account? Register"}
