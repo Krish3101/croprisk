@@ -1,33 +1,84 @@
-# Python
+# ==============================================================================
+# Git Ignore Rules for KisanAI
+# ==============================================================================
+
+# Python Bytecode & Package Caches
 __pycache__/
 *.py[cod]
 *$py.class
-*.sqlite3
-*.db
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Python Build Outputs & Distributions
+build/
+dist/
+dist-ssr/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
 .venv/
 venv/
 ENV/
 env/
 
-# Node
+# Node & Package Managers
 node_modules/
-dist/
-dist-ssr/
-*.local
+.eslintcache/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Environment Variables
+# Environment Variables & Local Credentials
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.cert
+*.crt
+credentials.json
 
-# OS Files
+# Local Databases
+*.sqlite3
+*.sqlite
+*.db
+
+# OS Generated Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# IDE and Editor
+# IDE & Editor Metadata
 .idea/
 .vscode/
 *.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
 
 # Logs
 *.log

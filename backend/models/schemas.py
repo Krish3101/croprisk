@@ -1,18 +1,20 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
 from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
+
 
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class PlotCreate(BaseModel):
     name: str
@@ -21,12 +23,14 @@ class PlotCreate(BaseModel):
     growth_stage: str
     sowing_date: str
 
+
 class PlotUpdate(BaseModel):
-    name: Optional[str] = None
-    crop_type: Optional[str] = None
-    location: Optional[str] = None
-    growth_stage: Optional[str] = None
-    sowing_date: Optional[str] = None
+    name: str | None = None
+    crop_type: str | None = None
+    location: str | None = None
+    growth_stage: str | None = None
+    sowing_date: str | None = None
+
 
 class RiskAssessmentResponse(BaseModel):
     id: int
@@ -38,9 +42,10 @@ class RiskAssessmentResponse(BaseModel):
     recommendation: str
     weather_summary: str | None = None
     created_at: datetime
+    is_stale: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class PlotResponse(BaseModel):
     id: int
@@ -51,8 +56,8 @@ class PlotResponse(BaseModel):
     sowing_date: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class PlotWithRiskResponse(PlotResponse):
-    latest_risk: Optional[RiskAssessmentResponse] = None
+    latest_risk: RiskAssessmentResponse | None = None

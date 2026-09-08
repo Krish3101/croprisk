@@ -1,18 +1,21 @@
-# KisanAI Risk Intelligence Platform V2
+# KisanAI - Crop Risk Assessment
 
-KisanAI Risk Intelligence Platform is an AI-driven web application designed to help farmers identify crop risks early. Unlike generic dashboards, this V2 focuses exclusively on predictive agronomy—correlating specific crop growth stages with 5-day weather forecasts to generate actionable risk assessments.
+KisanAI combines a plot's crop and growth stage with a five-day weather forecast to produce reproducible, prioritized risk assessments and plain-language explanations for growers.
 
 ---
 
-## 🎯 Core Problem Solved
-Generic weather apps say "It will rain." KisanAI says "It will rain, and your Tomatoes in the Flowering stage are at 85% risk for Late Blight. Apply fungicide today."
+## 🎯 Problem Solved
+Weather forecasts describe conditions but do not translate them into crop-specific, growth-stage-specific action for a particular plot. Growers need to know which of their plots is most at risk, what the primary threat is, why the forecast matters for that crop and stage, and what single action deserves attention now.
+
+KisanAI closes that interpretation gap by evaluating five-day forecasts against deterministic agronomic rules to produce a prioritized risk assessment and plain-language explanation.
 
 ## 🚀 Features
-- **Plot Management:** Track multiple plots by crop type, location, and growth stage.
-- **Deterministic Risk Engine:** A rule-based scoring engine (0-100) evaluating Heavy Rain, High Humidity, Extreme Temps, and Storm Conditions.
-- **AI Risk Analysis:** Structured, actionable explanations using OpenRouter LLM based purely on deterministic scores.
-- **Triage Dashboard:** A clean UI prioritizing plots by risk severity (LOW, MODERATE, HIGH).
-- **Secure Architecture:** Multi-tenant FastAPI backend with JWT-protected data isolation.
+- **Plot Management & Geocoding:** Track plots by crop type, growth stage, and location, automatically resolved to precise latitude/longitude coordinates with ambiguity clarification.
+- **Deterministic Agronomic Risk Engine:** Rule-based scoring engine (0–100) evaluating 5-day forecasts against baseline agronomic rules (Heavy Precipitation, Extreme Heat, Frost Risk, High Wind, and Disease Pressure) with strict immediacy tie-breaking.
+- **Severity Bands & Triage:** Clear severity levels (LOW: 0–30, MODERATE: 31–65, HIGH: 66–100) with portfolio dashboard prioritizing plots by current risk.
+- **Plain-Language Analysis & Single Action:** Plain-language explanation of why identified conditions matter for the crop at its current growth stage and exactly one recommended action, with deterministic fallback if the narrative service is unavailable.
+- **Freshness & Invalidation Lifecycle:** 12-hour assessment cache automatically invalidated whenever plot parameters change, plus graceful degraded operation identifying stale records during upstream weather outages.
+- **Tenant Isolation:** Multi-tenant FastAPI backend ensuring growers only access their own plots and assessments.
 
 ---
 
@@ -26,13 +29,16 @@ Generic weather apps say "It will rain." KisanAI says "It will rain, and your To
 ## 🔧 Setup & Installation
 
 ### 1. Environment Configuration
-Create a `.env` file in the `backend/` directory:
-```env
-# backend/.env
-SECRET_KEY=your_super_secret_jwt_key
-OPENWEATHER_KEY=your_openweather_api_key_here
-OPENROUTER_API_KEY=your_openrouter_api_key_here
+Copy the template environment configuration file and provide your API keys:
+```bash
+cp .env.example .env
 ```
+
+Required variables:
+- `SECRET_KEY`: Cryptographically secure secret key for JWT token signing.
+- `OPENWEATHER_KEY`: (Optional) OpenWeatherMap API key for weather data.
+- `OPENROUTER_API_KEY`: (Optional) OpenRouter API key for LLM risk insights.
+
 
 ### 2. Start Backend
 ```bash
