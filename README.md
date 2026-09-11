@@ -1,69 +1,102 @@
-# KisanAI - Crop Risk Assessment
+# CropRisk
 
-KisanAI combines a plot's crop and growth stage with a five-day weather forecast to produce reproducible, prioritized risk assessments and plain-language explanations for growers.
+Turns a five-day weather forecast into a risk score for a specific crop at its current
+growth stage, so a farmer gets "your wheat is at high risk of heat damage this week"
+instead of "38 °C and 40 mm of rain".
 
----
+The same weather means different things to different crops. Wheat at flowering is far more
+vulnerable to heat than wheat that has already ripened, so the score is calculated against
+thresholds for that crop and that stage.
 
-## 🎯 Problem Solved
-Weather forecasts describe conditions but do not translate them into crop-specific, growth-stage-specific action for a particular plot. Growers need to know which of their plots is most at risk, what the primary threat is, why the forecast matters for that crop and stage, and what single action deserves attention now.
+## The score is arithmetic, and the model never touches it
 
-KisanAI closes that interpretation gap by evaluating five-day forecasts against deterministic agronomic rules to produce a prioritized risk assessment and plain-language explanation.
+Five hazards are scored separately — heat, frost, excess rain, fungal disease risk, and
+wind lodging — each against thresholds defined per crop and growth stage. They're combined
+using stage-specific weights into a 0–100 score, a severity band, and whichever hazard
+contributed most.
 
-## 🚀 Features
-- **Plot Management & Geocoding:** Track plots by crop type, growth stage, and location, automatically resolved to precise latitude/longitude coordinates with ambiguity clarification.
-- **Deterministic Agronomic Risk Engine:** Rule-based scoring engine (0–100) evaluating 5-day forecasts against baseline agronomic rules (Heavy Precipitation, Extreme Heat, Frost Risk, High Wind, and Disease Pressure) with strict immediacy tie-breaking.
-- **Severity Bands & Triage:** Clear severity levels (LOW: 0–30, MODERATE: 31–65, HIGH: 66–100) with portfolio dashboard prioritizing plots by current risk.
-- **Plain-Language Analysis & Single Action:** Plain-language explanation of why identified conditions matter for the crop at its current growth stage and exactly one recommended action, with deterministic fallback if the narrative service is unavailable.
-- **Freshness & Invalidation Lifecycle:** 12-hour assessment cache automatically invalidated whenever plot parameters change, plus graceful degraded operation identifying stale records during upstream weather outages.
-- **Tenant Isolation:** Multi-tenant FastAPI backend ensuring growers only access their own plots and assessments.
+All of that lives in `app/domain/`, does no I/O, and is tested against hand-checked vectors.
+An LLM, when one is configured, only rewrites the numbers the engine already produced into
+plain advice. With no key configured, a written fallback covers the same ground and the app
+works exactly as well.
 
----
+That ordering is deliberate: advice about a crop is worth nothing if the number underneath
+it was invented.
 
-## ⚙️ Tech Stack
-- **Backend:** Python 3.11, FastAPI, SQLAlchemy, SQLite
-- **Frontend:** React 19, Vite, Tailwind CSS v4
-- **External APIs:** OpenWeatherMap, OpenRouter
+## When a cached score stops being true
 
----
+Assessments are cached for 12 hours, but expiry isn't the only thing that can invalidate
+one.
 
-## 🔧 Setup & Installation
+Advancing a plot's growth stage throws the cache away immediately, because the stored score
+answers a question about a stage the crop has left.
 
-### 1. Environment Configuration
-Copy the template environment configuration file and provide your API keys:
+If the weather provider is unreachable, a stored assessment is served with `is_stale: true`
+rather than an error — you can still see last night's reading. Unless the stage has moved
+on, in which case stale data would be actively misleading, and the request fails instead.
+
+## Running it
+
 ```bash
-cp .env.example .env
+./scripts/start.sh
 ```
 
-Required variables:
-- `SECRET_KEY`: Cryptographically secure secret key for JWT token signing.
-- `OPENWEATHER_KEY`: (Optional) OpenWeatherMap API key for weather data.
-- `OPENROUTER_API_KEY`: (Optional) OpenRouter API key for LLM risk insights.
+Starts the API on port 8000 and the frontend on port 5173. `./scripts/reset.sh` wipes the
+database and stops both.
 
+By hand:
 
-### 2. Start Backend
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env          # then add your OpenWeather key
+uvicorn app.main:app --reload --port 8000
 ```
 
-### 3. Start Frontend
-Open a new terminal:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Visit `http://localhost:5173` to view the application.
+`JWT_SECRET` and `OPENWEATHER_API_KEY` are both needed for the app to do anything useful.
+Accounts and plots work without the weather key, but scoring a plot is the whole point and
+it calls OpenWeather, so without that key `/api/plots/{id}/risk` and `/api/geocode` return
+503. `OPENROUTER_API_KEY` is the genuinely optional one.
 
----
-
-## 🧪 Testing
-The backend is covered by an automated integration suite (`pytest`) testing authentication, authorization, and data isolation.
 ```bash
-cd backend
-PYTHONPATH=. pytest tests/
+cd backend && source .venv/bin/activate && pytest
+cd frontend && npm test
 ```
+
+The backend tests cover the scoring engine against known vectors, the caching and
+stale-serving rules, and per-user isolation on the API. The frontend tests cover the score
+badge, the crop/stage dialog, and error rendering.
+
+```
+backend/app/
+  domain/crops.py       crop and growth-stage thresholds
+  domain/engine.py      hazard scoring, no I/O
+  services/weather.py   OpenWeather client
+  services/advisory.py  LLM advice with deterministic fallback
+  services/assessment.py  caching and stale-serving rules
+  routes/               auth, plots, risk, lookup
+frontend/src/
+  pages/                dashboard, plot detail, login
+  components/           score badge, hazard bars, forecast chart
+```
+
+## What the thresholds are actually worth
+
+Six crops, five stages each, with thresholds I compiled from agronomic references rather
+than from field trials. The model is plausible, not validated, and I would not want a real
+planting decision made on it without an agronomist checking the numbers first.
+
+Forecasts are five days, so it says nothing about the season. Growth stage is set by hand;
+the app has no way to tell whether a plot has actually reached the stage it's been told
+about.
+
+## License
+
+[MIT](LICENSE)
