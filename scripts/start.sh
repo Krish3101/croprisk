@@ -4,8 +4,6 @@ set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "CropRisk Startup"
-
 if ! command -v python3 &>/dev/null; then
     echo "Error: python3 is not installed or not in PATH."
     exit 1
@@ -39,7 +37,7 @@ FRONTEND_PID=""
 
 cleanup() {
     echo ""
-    echo "Shutting down CropRisk services..."
+    echo "Stopping..."
     if [ -n "$BACKEND_PID" ]; then
         kill "$BACKEND_PID" 2>/dev/null || true
     fi
@@ -47,7 +45,6 @@ cleanup() {
         kill "$FRONTEND_PID" 2>/dev/null || true
     fi
     wait 2>/dev/null || true
-    echo "Services stopped."
 }
 
 trap cleanup SIGINT SIGTERM EXIT
@@ -67,13 +64,5 @@ echo "Starting frontend (Vite/React) on port 5173..."
 ) &
 FRONTEND_PID=$!
 
-echo ""
-echo "CropRisk is running!"
-echo "• Frontend UI:  http://localhost:5173"
-echo "• Backend API:  http://localhost:8000"
-echo "• API Docs:     http://localhost:8000/docs"
-echo "Press Ctrl+C to stop all services."
-echo ""
-
-# Wait for both processes
+echo "Open http://localhost:5173 (API docs at http://localhost:8000/docs). Ctrl+C stops both."
 wait "$BACKEND_PID" "$FRONTEND_PID"

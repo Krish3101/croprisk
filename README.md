@@ -45,8 +45,8 @@ on, in which case stale data would be actively misleading, and the request fails
 ./scripts/start.sh
 ```
 
-Starts the API on port 8000 and the frontend on port 5173. `./scripts/reset.sh` wipes the
-database and stops both.
+Starts the API on port 8000 and the frontend on port 5173; Ctrl+C stops both.
+`./scripts/reset.sh` deletes the database.
 
 By hand:
 
