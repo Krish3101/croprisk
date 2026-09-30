@@ -32,7 +32,6 @@ class Settings(BaseSettings):
         default=f"sqlite:///{BACKEND_DIR / 'croprisk.db'}",
         validation_alias=AliasChoices("DATABASE_URL"),
     )
-    LLM_MODEL: str = "google/gemini-2.0-flash-lite-preview-02-05:free"
 
     @field_validator("JWT_SECRET")
     @classmethod
