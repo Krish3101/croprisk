@@ -81,11 +81,12 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
   return (
     <div className="relative" ref={wrapperRef}>
-      <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
+      <label htmlFor="plot-location" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
         Location (Search & Pick) *
       </label>
       <div className="relative">
         <input
+          id="plot-location"
           type="text"
           value={query}
           onChange={handleInputChange}

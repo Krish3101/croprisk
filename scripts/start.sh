@@ -4,8 +4,6 @@ set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "CropRisk Startup"
-
 if ! command -v python3 &>/dev/null; then
     echo "Error: python3 is not installed or not in PATH."
     exit 1
@@ -24,9 +22,17 @@ if [ ! -d "$ROOT_DIR/backend/.venv" ]; then
     "$ROOT_DIR/backend/.venv/bin/pip" install -e "$ROOT_DIR/backend[dev]"
 fi
 
-if [ ! -f "$ROOT_DIR/backend/.env" ]; then
+ENV_FILE="$ROOT_DIR/backend/.env"
+if [ ! -f "$ENV_FILE" ]; then
     echo "Creating backend/.env from backend/.env.example..."
-    cp "$ROOT_DIR/backend/.env.example" "$ROOT_DIR/backend/.env"
+    cp "$ROOT_DIR/backend/.env.example" "$ENV_FILE"
+fi
+
+if ! grep -q '^JWT_SECRET=.' "$ENV_FILE"; then
+    echo "Generating JWT_SECRET in backend/.env..."
+    grep -v '^JWT_SECRET=' "$ENV_FILE" > "$ENV_FILE.tmp" || true
+    echo "JWT_SECRET=$(python3 -c 'import secrets; print(secrets.token_hex(32))')" >> "$ENV_FILE.tmp"
+    mv "$ENV_FILE.tmp" "$ENV_FILE"
 fi
 
 if [ ! -d "$ROOT_DIR/frontend/node_modules" ]; then
@@ -39,7 +45,7 @@ FRONTEND_PID=""
 
 cleanup() {
     echo ""
-    echo "Shutting down CropRisk services..."
+    echo "Stopping..."
     if [ -n "$BACKEND_PID" ]; then
         kill "$BACKEND_PID" 2>/dev/null || true
     fi
@@ -47,7 +53,6 @@ cleanup() {
         kill "$FRONTEND_PID" 2>/dev/null || true
     fi
     wait 2>/dev/null || true
-    echo "Services stopped."
 }
 
 trap cleanup SIGINT SIGTERM EXIT
@@ -67,13 +72,5 @@ echo "Starting frontend (Vite/React) on port 5173..."
 ) &
 FRONTEND_PID=$!
 
-echo ""
-echo "CropRisk is running!"
-echo "• Frontend UI:  http://localhost:5173"
-echo "• Backend API:  http://localhost:8000"
-echo "• API Docs:     http://localhost:8000/docs"
-echo "Press Ctrl+C to stop all services."
-echo ""
-
-# Wait for both processes
+echo "Open http://localhost:5173 (API docs at http://localhost:8000/docs). Ctrl+C stops both."
 wait "$BACKEND_PID" "$FRONTEND_PID"

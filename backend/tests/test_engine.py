@@ -18,7 +18,7 @@ def make_constant_forecast(
 ) -> list[ForecastInterval]:
     return [
         ForecastInterval(
-            timestamp=f"2026-09-10T{i*3:02d}:00:00Z",
+            timestamp=f"2026-09-10T{i * 3:02d}:00:00Z",
             temperature_c=temp_c,
             relative_humidity=rh,
             wind_kmh=wind_kmh,
@@ -127,6 +127,7 @@ def test_empty_intervals_raises():
 
 def test_unknown_crop_raises():
     from app.domain.crops import StageConfig
+
     bad_stage = StageConfig(
         id="nonexistent.stage",
         name="Bad",
@@ -154,9 +155,9 @@ def test_hazard_heat_thresholds():
     assert res_below.hazard_indices["heat"] == 0.0
 
     # Mid-range: T=30.5 C for 1 block, rest 20 C (DH = 3.5*3 = 10.5)
-    intervals = [
-        ForecastInterval("t0", 30.5, 40.0, 5.0, 0.0)
-    ] + [ForecastInterval(f"t{i}", 20.0, 40.0, 5.0, 0.0) for i in range(1, 40)]
+    intervals = [ForecastInterval("t0", 30.5, 40.0, 5.0, 0.0)] + [
+        ForecastInterval(f"t{i}", 20.0, 40.0, 5.0, 0.0) for i in range(1, 40)
+    ]
     res_mid = evaluate(intervals, stage)
     assert 0.0 < res_mid.hazard_indices["heat"] < 100.0
 
@@ -195,23 +196,23 @@ def test_hazard_disease_thresholds():
     stage = get_stage("wheat", "wheat.anthesis")
 
     # Run of 3 blocks = 9 hours (< 12 hours) -> I_disease = 0
-    intervals_short = [
-        ForecastInterval(f"t{i}", 20.0, 85.0, 5.0, 0.0) for i in range(3)
-    ] + [ForecastInterval(f"t{i}", 20.0, 70.0, 5.0, 0.0) for i in range(3, 40)]
+    intervals_short = [ForecastInterval(f"t{i}", 20.0, 85.0, 5.0, 0.0) for i in range(3)] + [
+        ForecastInterval(f"t{i}", 20.0, 70.0, 5.0, 0.0) for i in range(3, 40)
+    ]
     res_short = evaluate(intervals_short, stage)
     assert res_short.hazard_indices["disease"] == 0.0
 
     # Run of 4 blocks = 12 hours -> 30 + 0 = 30.0
-    intervals_12h = [
-        ForecastInterval(f"t{i}", 20.0, 85.0, 5.0, 0.0) for i in range(4)
-    ] + [ForecastInterval(f"t{i}", 20.0, 70.0, 5.0, 0.0) for i in range(4, 40)]
+    intervals_12h = [ForecastInterval(f"t{i}", 20.0, 85.0, 5.0, 0.0) for i in range(4)] + [
+        ForecastInterval(f"t{i}", 20.0, 70.0, 5.0, 0.0) for i in range(4, 40)
+    ]
     res_12h = evaluate(intervals_12h, stage)
     assert round(res_12h.hazard_indices["disease"], 1) == 30.0
 
     # Run of 8 blocks = 24 hours -> 30 + (12/24)*70 = 65.0
-    intervals_24h = [
-        ForecastInterval(f"t{i}", 20.0, 85.0, 5.0, 0.0) for i in range(8)
-    ] + [ForecastInterval(f"t{i}", 20.0, 70.0, 5.0, 0.0) for i in range(8, 40)]
+    intervals_24h = [ForecastInterval(f"t{i}", 20.0, 85.0, 5.0, 0.0) for i in range(8)] + [
+        ForecastInterval(f"t{i}", 20.0, 70.0, 5.0, 0.0) for i in range(8, 40)
+    ]
     res_24h = evaluate(intervals_24h, stage)
     assert round(res_24h.hazard_indices["disease"], 1) == 65.0
 
@@ -269,7 +270,9 @@ def test_weather_digest_computation():
         ForecastInterval("t0", 35.0, 85.0, 45.0, 12.0),
         ForecastInterval("t1", 18.0, 85.0, 20.0, 8.0),
         ForecastInterval("t2", 20.0, 85.0, 10.0, 0.0),
-        ForecastInterval("t3", 22.0, 85.0, 15.0, 0.0),  # 4 consecutive blocks in [15, 25] and RH>=80
+        ForecastInterval(
+            "t3", 22.0, 85.0, 15.0, 0.0
+        ),  # 4 consecutive blocks in [15, 25] and RH>=80
         ForecastInterval("t4", 10.0, 50.0, 5.0, 0.0),
     ]
     digest = compute_digest(intervals, crop)

@@ -42,6 +42,8 @@ class StageSummary(BaseModel):
     name: str
     bbch: str
     order: int
+    t_crit_heat: float
+    t_crit_frost: float
 
 
 class CropSummary(BaseModel):
@@ -57,7 +59,6 @@ class GeocodeCandidate(BaseModel):
     city: str | None = None
     state: str | None = None
     country: str | None = None
-    country_code: str | None = None
     latitude: float
     longitude: float
 

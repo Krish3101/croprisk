@@ -155,9 +155,7 @@ export const PlotDetail: React.FC = () => {
   const { plot, risk, advisory, weather } = riskData;
 
   const currentCrop = crops.find((c) => c.common_name === plot.crop || c.scientific_name === plot.scientific_name);
-  // Default thresholds if not yet matched (wheat anthesis default: 27 / 1)
-  const tCritHeat = 27.0;
-  const tCritFrost = 1.0;
+  const currentStage = currentCrop?.stages.find((s) => s.id === plot.stage_id);
 
   return (
     <div className="min-h-screen bg-stone-100 pb-16">
@@ -244,11 +242,13 @@ export const PlotDetail: React.FC = () => {
           </div>
         </div>
 
-        <ForecastChart
-          intervals={weather.intervals}
-          tCritHeat={tCritHeat}
-          tCritFrost={tCritFrost}
-        />
+        {currentStage && (
+          <ForecastChart
+            intervals={weather.intervals}
+            tCritHeat={currentStage.t_crit_heat}
+            tCritFrost={currentStage.t_crit_frost}
+          />
+        )}
       </main>
 
       <PlotDialog

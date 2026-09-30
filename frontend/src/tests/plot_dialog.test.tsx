@@ -9,8 +9,8 @@ const mockCrops: CropSummary[] = [
     common_name: "Wheat",
     scientific_name: "Triticum aestivum",
     stages: [
-      { id: "wheat.emergence", name: "Emergence", bbch: "00-19", order: 1 },
-      { id: "wheat.anthesis", name: "Flowering", bbch: "61-69", order: 3 },
+      { id: "wheat.emergence", name: "Emergence", bbch: "00-19", order: 1, t_crit_heat: 30, t_crit_frost: 2 },
+      { id: "wheat.anthesis", name: "Flowering", bbch: "61-69", order: 3, t_crit_heat: 30, t_crit_frost: 2 },
     ],
   },
   {
@@ -18,8 +18,8 @@ const mockCrops: CropSummary[] = [
     common_name: "Rice",
     scientific_name: "Oryza sativa",
     stages: [
-      { id: "rice.seedling", name: "Seedling", bbch: "00-19", order: 1 },
-      { id: "rice.tillering", name: "Tillering", bbch: "20-39", order: 2 },
+      { id: "rice.seedling", name: "Seedling", bbch: "00-19", order: 1, t_crit_heat: 30, t_crit_frost: 2 },
+      { id: "rice.tillering", name: "Tillering", bbch: "20-39", order: 2, t_crit_heat: 30, t_crit_frost: 2 },
     ],
   },
 ];

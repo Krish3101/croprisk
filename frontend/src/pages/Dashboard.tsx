@@ -71,9 +71,6 @@ export const Dashboard: React.FC = () => {
             <span className="text-xl font-black text-emerald-800 tracking-tight">
               CropRisk
             </span>
-            <span className="hidden sm:inline text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-              Grower Triage
-            </span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -93,9 +90,9 @@ export const Dashboard: React.FC = () => {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-black text-stone-900">Field Risk Triage</h1>
+            <h1 className="text-xl font-black text-stone-900">Your fields</h1>
             <p className="text-xs text-stone-500">
-              Deterministic 5-day weather hazard evaluations ordered by urgency
+              Weather risk for the next five days, most urgent first
             </p>
           </div>
 

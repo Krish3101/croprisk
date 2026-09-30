@@ -9,7 +9,7 @@ const mockCrops: CropSummary[] = [
     id: "wheat",
     common_name: "Wheat",
     scientific_name: "Triticum aestivum",
-    stages: [{ id: "wheat.anthesis", name: "Flowering", bbch: "61-69", order: 3 }],
+    stages: [{ id: "wheat.anthesis", name: "Flowering", bbch: "61-69", order: 3, t_crit_heat: 30, t_crit_frost: 2 }],
   },
 ];
 

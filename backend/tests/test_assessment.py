@@ -52,7 +52,7 @@ def db_session():
 def make_intervals(temp: float = 20.0):
     return [
         ForecastInterval(
-            timestamp=f"2026-09-10T{i*3:02d}:00:00Z",
+            timestamp=f"2026-09-10T{i * 3:02d}:00:00Z",
             temperature_c=temp,
             relative_humidity=50.0,
             wind_kmh=10.0,
@@ -160,7 +160,9 @@ def test_provider_down_after_stage_change_raises_503(db_session):
     get_plot_risk(plot, db_session, refresh=False, weather_provider=mock_weather)
 
     # Stage changed to wheat.ripening
-    plot.updated_at = (datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=5)).isoformat()
+    plot.updated_at = (
+        datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=5)
+    ).isoformat()
     plot.stage_id = "wheat.ripening"
     db_session.commit()
 

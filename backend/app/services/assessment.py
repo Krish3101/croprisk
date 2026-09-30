@@ -102,9 +102,7 @@ def get_plot_risk(
         weather_provider = weather.fetch_forecast
     if advisory_builder is None:
         advisory_builder = advisory.build_advisory
-    stored_row = (
-        db.query(RiskAssessment).filter(RiskAssessment.plot_id == plot.id).first()
-    )
+    stored_row = db.query(RiskAssessment).filter(RiskAssessment.plot_id == plot.id).first()
 
     now = datetime.datetime.now(datetime.UTC)
     plot_updated_dt = _parse_iso(plot.updated_at)

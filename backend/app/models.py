@@ -92,9 +92,11 @@ class RiskAssessment(Base):
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     severity: Mapped[str] = mapped_column(String, nullable=False)
     primary_threat: Mapped[str] = mapped_column(String, nullable=False)
-    hazard_indices: Mapped[str] = mapped_column(Text, nullable=False)  # JSON {heat,frost,precip,disease,wind}
-    forecast: Mapped[str] = mapped_column(Text, nullable=False)        # JSON normalised intervals
-    advisory: Mapped[str] = mapped_column(Text, nullable=False)        # JSON Advisory
+    hazard_indices: Mapped[str] = mapped_column(
+        Text, nullable=False
+    )  # JSON {heat,frost,precip,disease,wind}
+    forecast: Mapped[str] = mapped_column(Text, nullable=False)  # JSON normalised intervals
+    advisory: Mapped[str] = mapped_column(Text, nullable=False)  # JSON Advisory
     advisory_source: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
 

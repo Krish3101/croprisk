@@ -120,7 +120,9 @@ def evaluate(
 
     # 2. Frost
     min_t = min(i.temperature_c for i in intervals)
-    i_frost = _clamp01((stage.t_crit_frost - min_t) / (stage.t_crit_frost - stage.t_lethal_frost)) * 100.0
+    i_frost = (
+        _clamp01((stage.t_crit_frost - min_t) / (stage.t_crit_frost - stage.t_lethal_frost)) * 100.0
+    )
 
     # 3. Excess precipitation
     rain_values = [i.rain_mm for i in intervals]
@@ -128,7 +130,9 @@ def evaluate(
         r24_max = sum(rain_values)
     else:
         r24_max = max(sum(rain_values[k : k + 8]) for k in range(len(rain_values) - 7))
-    i_precip = _clamp01((r24_max - stage.r_crit_24h) / (stage.r_flood_24h - stage.r_crit_24h)) * 100.0
+    i_precip = (
+        _clamp01((r24_max - stage.r_crit_24h) / (stage.r_flood_24h - stage.r_crit_24h)) * 100.0
+    )
 
     # 4. Fungal disease
     l_hours = _compute_longest_run_hours(intervals, crop.rh_crit, crop.t_min_dis, crop.t_max_dis)

@@ -11,6 +11,8 @@ export interface StageSummary {
   name: string;
   bbch: string;
   order: number;
+  t_crit_heat: number;
+  t_crit_frost: number;
 }
 
 export interface CropSummary {
@@ -25,7 +27,6 @@ export interface GeocodeCandidate {
   city: string | null;
   state: string | null;
   country: string | null;
-  country_code: string | null;
   latitude: number;
   longitude: number;
 }

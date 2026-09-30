@@ -29,7 +29,9 @@ def geocode(query: str) -> list[dict]:
         with httpx.Client(timeout=5.0) as client:
             resp = client.get(url, params=params)
             if resp.status_code != 200:
-                raise UpstreamUnavailableError(f"Geocoding provider returned status {resp.status_code}")
+                raise UpstreamUnavailableError(
+                    f"Geocoding provider returned status {resp.status_code}"
+                )
             items = resp.json()
     except (httpx.RequestError, httpx.TimeoutException) as exc:
         raise UpstreamUnavailableError("Geocoding service timed out or failed.") from exc
@@ -52,15 +54,16 @@ def geocode(query: str) -> list[dict]:
         parts = [p for p in [name, state, country] if p]
         display_name = ", ".join(parts) if parts else f"{lat:.4f}, {lon:.4f}"
 
-        results.append({
-            "display_name": display_name,
-            "city": name or None,
-            "state": state,
-            "country": country,
-            "country_code": country,
-            "latitude": lat,
-            "longitude": lon,
-        })
+        results.append(
+            {
+                "display_name": display_name,
+                "city": name or None,
+                "state": state,
+                "country": country,
+                "latitude": lat,
+                "longitude": lon,
+            }
+        )
         if len(results) >= 5:
             break
 
@@ -84,7 +87,9 @@ def fetch_forecast(latitude: float, longitude: float) -> list[ForecastInterval]:
         with httpx.Client(timeout=5.0) as client:
             resp = client.get(url, params=params)
             if resp.status_code != 200:
-                raise UpstreamUnavailableError(f"Weather forecast provider returned status {resp.status_code}")
+                raise UpstreamUnavailableError(
+                    f"Weather forecast provider returned status {resp.status_code}"
+                )
             data = resp.json()
     except (httpx.RequestError, httpx.TimeoutException) as exc:
         raise UpstreamUnavailableError("Weather forecast service timed out or failed.") from exc

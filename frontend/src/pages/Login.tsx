@@ -9,13 +9,10 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  // Separate string states so no object ever reaches JSX
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccessMessage(null);
     setErrorMessage(null);
 
     if (!email.trim() || !password) {
@@ -32,13 +29,9 @@ export const Login: React.FC = () => {
     try {
       if (isRegister) {
         await api.register(email.trim(), password);
-        setSuccessMessage("Account created successfully! Please sign in with your credentials.");
-        setIsRegister(false);
-        setPassword("");
-      } else {
-        await api.login(email.trim(), password);
-        navigate("/");
       }
+      await api.login(email.trim(), password);
+      navigate("/");
     } catch (err) {
       if (err instanceof ApiError) {
         setErrorMessage(err.message);
@@ -58,7 +51,7 @@ export const Login: React.FC = () => {
             CropRisk
           </h1>
           <p className="text-xs text-stone-500 font-medium">
-            Crop- and Growth-Stage-Aware Agronomic Risk Engine
+            Weather risk for your crops, stage by stage
           </p>
         </div>
 
@@ -68,7 +61,6 @@ export const Login: React.FC = () => {
             onClick={() => {
               setIsRegister(false);
               setErrorMessage(null);
-              setSuccessMessage(null);
             }}
             className={`flex-1 py-2.5 text-sm font-semibold border-b-2 text-center transition ${
               !isRegister
@@ -83,7 +75,6 @@ export const Login: React.FC = () => {
             onClick={() => {
               setIsRegister(true);
               setErrorMessage(null);
-              setSuccessMessage(null);
             }}
             className={`flex-1 py-2.5 text-sm font-semibold border-b-2 text-center transition ${
               isRegister
@@ -95,12 +86,6 @@ export const Login: React.FC = () => {
           </button>
         </div>
 
-        {successMessage && (
-          <div className="p-3 text-xs bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-md font-medium">
-            {successMessage}
-          </div>
-        )}
-
         {errorMessage && (
           <div className="p-3 text-xs bg-rose-50 text-rose-800 border border-rose-300 rounded-md font-medium">
             {errorMessage}
@@ -109,10 +94,11 @@ export const Login: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
+            <label htmlFor="login-email" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
               Email Address
             </label>
             <input
+              id="login-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -123,10 +109,11 @@ export const Login: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
+            <label htmlFor="login-password" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
               Password (min. 8 characters)
             </label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -142,7 +129,7 @@ export const Login: React.FC = () => {
             disabled={loading}
             className="w-full py-2.5 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-md shadow transition disabled:opacity-50"
           >
-            {loading ? "Processing..." : isRegister ? "Create Grower Account" : "Sign In to Dashboard"}
+            {loading ? "Please wait..." : isRegister ? "Create account" : "Sign in"}
           </button>
         </form>
       </div>

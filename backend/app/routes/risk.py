@@ -20,11 +20,7 @@ def get_risk(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> PlotRiskResponse:
-    plot = (
-        db.query(Plot)
-        .filter(Plot.id == plot_id, Plot.user_id == current_user.id)
-        .first()
-    )
+    plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
     if not plot:
         raise NotFoundError(f"Plot {plot_id} not found.")
 

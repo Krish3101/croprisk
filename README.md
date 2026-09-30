@@ -8,6 +8,10 @@ The same weather means different things to different crops. Wheat at flowering i
 vulnerable to heat than wheat that has already ripened, so the score is calculated against
 thresholds for that crop and that stage.
 
+![Three fields sorted by risk](docs/dashboard.png)
+
+![One field: hazard breakdown, advice, and the forecast against the stage's thresholds](docs/plot.png)
+
 ## The score is arithmetic, and the model never touches it
 
 Five hazards are scored separately — heat, frost, excess rain, fungal disease risk, and
@@ -41,8 +45,8 @@ on, in which case stale data would be actively misleading, and the request fails
 ./scripts/start.sh
 ```
 
-Starts the API on port 8000 and the frontend on port 5173. `./scripts/reset.sh` wipes the
-database and stops both.
+Starts the API on port 8000 and the frontend on port 5173; Ctrl+C stops both.
+`./scripts/reset.sh` deletes the database.
 
 By hand:
 
@@ -50,7 +54,7 @@ By hand:
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env          # then add your OpenWeather key
+cp .env.example .env          # then set JWT_SECRET to a long random string and add your OpenWeather key
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -60,7 +64,8 @@ npm install
 npm run dev
 ```
 
-`JWT_SECRET` and `OPENWEATHER_API_KEY` are both needed for the app to do anything useful.
+`JWT_SECRET` and `OPENWEATHER_API_KEY` are both needed for the app to do anything useful
+(`start.sh` generates the first one for you).
 Accounts and plots work without the weather key, but scoring a plot is the whole point and
 it calls OpenWeather, so without that key `/api/plots/{id}/risk` and `/api/geocode` return
 503. `OPENROUTER_API_KEY` is the genuinely optional one.

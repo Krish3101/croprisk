@@ -23,7 +23,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
 def register(req: RegisterRequest, db: Session = Depends(get_db)) -> UserResponse:
-    existing = db.query(User).filter(User.email.ilike(req.email)).first()
+    existing = db.query(User).filter(User.email == req.email).first()
     if existing:
         raise EmailTakenError()
 
@@ -42,7 +42,7 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)) -> UserRespons
 
 @router.post("/login", status_code=status.HTTP_200_OK, response_model=UserResponse)
 def login(req: LoginRequest, response: Response, db: Session = Depends(get_db)) -> UserResponse:
-    user = db.query(User).filter(User.email.ilike(req.email)).first()
+    user = db.query(User).filter(User.email == req.email).first()
     if not user or not verify_password(req.password, user.password_hash):
         raise InvalidCredentialsError()
 

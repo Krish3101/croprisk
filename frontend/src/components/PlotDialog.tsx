@@ -150,10 +150,11 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
         )}
 
         <div>
-          <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
+          <label htmlFor="plot-name" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
             Field Name *
           </label>
           <input
+            id="plot-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -170,10 +171,11 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
+          <label htmlFor="plot-crop" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
             Crop *
           </label>
           <select
+            id="plot-crop"
             value={cropId}
             onChange={handleCropChange}
             data-testid="crop-select"
@@ -196,10 +198,11 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
+          <label htmlFor="plot-stage" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
             Current Growth Stage *
           </label>
           <select
+            id="plot-stage"
             value={stageId}
             onChange={(e) => setStageId(e.target.value)}
             disabled={!cropId}
@@ -239,10 +242,11 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
         />
 
         <div>
-          <label className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
+          <label htmlFor="plot-sowing-date" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
             Sowing Date *
           </label>
           <input
+            id="plot-sowing-date"
             type="date"
             value={sowingDate}
             max={todayStr}
