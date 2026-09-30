@@ -42,6 +42,8 @@ class StageSummary(BaseModel):
     name: str
     bbch: str
     order: int
+    t_crit_heat: float
+    t_crit_frost: float
 
 
 class CropSummary(BaseModel):

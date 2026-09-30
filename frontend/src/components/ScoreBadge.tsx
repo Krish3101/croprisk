@@ -49,7 +49,7 @@ export const ScoreBadge: React.FC<ScoreBadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-md border font-medium ${current.bg} ${current.text} ${current.border} ${sizeClasses[size]}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border font-medium ${current.bg} ${current.text} ${current.border} ${sizeClasses[size]}`}
       data-testid="score-badge"
     >
       <span aria-hidden="true" className="font-bold">

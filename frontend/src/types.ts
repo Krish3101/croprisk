@@ -11,6 +11,8 @@ export interface StageSummary {
   name: string;
   bbch: string;
   order: number;
+  t_crit_heat: number;
+  t_crit_frost: number;
 }
 
 export interface CropSummary {

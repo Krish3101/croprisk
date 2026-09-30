@@ -22,6 +22,8 @@ def get_crops(_current_user: User = Depends(get_current_user)) -> list[CropSumma
                 name=s.name,
                 bbch=s.bbch,
                 order=s.order,
+                t_crit_heat=s.t_crit_heat,
+                t_crit_frost=s.t_crit_frost,
             )
             for s in sorted_stages
         ]
