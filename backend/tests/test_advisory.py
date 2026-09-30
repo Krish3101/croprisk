@@ -30,7 +30,7 @@ def test_advisory_bypass_below_30():
     )
     res = advisory.build_advisory(result, crop, stage, "Pune, India", 30, dummy_digest())
     assert res.source == "bypass"
-    assert "tolerance" in res.headline.lower() or "normal" in res.headline.lower()
+    assert res.headline == advisory.BYPASS_ADVISORY.headline
 
 
 def test_all_30_fallbacks_exist_and_validate():

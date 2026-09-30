@@ -1,4 +1,4 @@
-"""Deterministic fallback advisories for all (crop_id, primary_threat) combinations."""
+"""Written advice for every (crop, main threat) pair, used when there is no LLM reply."""
 
 from app.schemas import Action, Advisory
 
@@ -467,19 +467,19 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
 }
 
 GENERIC_FALLBACK = Advisory(
-    headline="Agronomic Advisory for Current Weather Conditions",
-    impact_analysis="Forecasted environmental conditions show elevated hazard levels for crop development. Timely field management and moisture regulation are recommended to minimize crop stress.",
+    headline="This week's weather could stress your crop",
+    impact_analysis="Part of the next five days is outside what this crop handles well at this stage. Acting early keeps the damage small.",
     actions=[
         Action(
             timeframe="immediate_24h",
-            directive="Inspect field drainage and soil moisture to adjust irrigation schedules accordingly.",
+            directive="Check drainage and soil moisture, and adjust watering to match.",
         ),
         Action(
             timeframe="preventative_72h",
-            directive="Consult local agricultural extension agents for crop-specific seasonal management.",
+            directive="Ask your local agriculture extension office what they recommend for this crop right now.",
         ),
     ],
-    monitoring_focus="Monitor plant canopy health and root-zone soil condition on a daily basis.",
+    monitoring_focus="Look at the leaves, and the soil around the roots, every day this week.",
 )
 
 

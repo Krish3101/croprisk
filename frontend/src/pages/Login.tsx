@@ -58,7 +58,7 @@ export const Login: React.FC = () => {
             CropRisk
           </h1>
           <p className="text-xs text-stone-500 font-medium">
-            Crop- and Growth-Stage-Aware Agronomic Risk Engine
+            Weather risk for your crops, stage by stage
           </p>
         </div>
 
@@ -142,7 +142,7 @@ export const Login: React.FC = () => {
             disabled={loading}
             className="w-full py-2.5 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-md shadow transition disabled:opacity-50"
           >
-            {loading ? "Processing..." : isRegister ? "Create Grower Account" : "Sign In to Dashboard"}
+            {loading ? "Please wait..." : isRegister ? "Create account" : "Sign in"}
           </button>
         </form>
       </div>

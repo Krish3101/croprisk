@@ -8,15 +8,15 @@ interface AdvisoryProps {
 export const Advisory: React.FC<AdvisoryProps> = ({ advisory }) => {
   const sourceBadges = {
     llm: {
-      label: "AI Advisory (OpenRouter LLM)",
+      label: "Written by AI",
       badgeClass: "bg-purple-100 text-purple-800 border-purple-200",
     },
     fallback: {
-      label: "Standard Agronomic Advisory (Deterministic)",
+      label: "Standard advice",
       badgeClass: "bg-blue-100 text-blue-800 border-blue-200",
     },
     bypass: {
-      label: "Conditions Normal (Bypass)",
+      label: "No risk this week",
       badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
     },
   };

@@ -1,4 +1,4 @@
-"""Advisory service: bypass, LLM generation with schema validation & retry, and deterministic fallback."""
+"""Writes the advice: a fixed note when there is no risk, else the LLM, else the written fallback."""
 
 import json
 import logging
@@ -29,15 +29,15 @@ Produce valid JSON matching this schema:
 }"""
 
 BYPASS_ADVISORY = Advisory(
-    headline="Weather conditions are within normal crop tolerance",
-    impact_analysis="Forecasted environmental metrics remain within safe developmental boundaries for this growth stage. No immediate yield-limiting stress is anticipated over the 5-day horizon.",
+    headline="No weather risk this week",
+    impact_analysis="The next five days stay within what this crop can handle at this stage, so the weather shouldn't cost you any yield.",
     actions=[
         Action(
             timeframe="preventative_72h",
-            directive="Maintain standard agronomic monitoring and proceed with regular field operations.",
+            directive="Carry on with normal field work.",
         )
     ],
-    monitoring_focus="Conduct routine scouting for baseline soil moisture and standard pest emergence.",
+    monitoring_focus="Keep up your usual checks on soil moisture and pests.",
 )
 
 
@@ -152,7 +152,7 @@ def build_advisory(
                 source="llm",
             )
 
-    # 3. Deterministic fallback
+    # 3. Written fallback
     fallback = get_fallback_advisory(crop.id, result.primary_threat)
     return AdvisoryResponse(
         headline=fallback.headline,
