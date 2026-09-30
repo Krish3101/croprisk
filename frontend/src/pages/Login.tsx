@@ -9,13 +9,10 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  // Separate string states so no object ever reaches JSX
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccessMessage(null);
     setErrorMessage(null);
 
     if (!email.trim() || !password) {
@@ -32,13 +29,9 @@ export const Login: React.FC = () => {
     try {
       if (isRegister) {
         await api.register(email.trim(), password);
-        setSuccessMessage("Account created successfully! Please sign in with your credentials.");
-        setIsRegister(false);
-        setPassword("");
-      } else {
-        await api.login(email.trim(), password);
-        navigate("/");
       }
+      await api.login(email.trim(), password);
+      navigate("/");
     } catch (err) {
       if (err instanceof ApiError) {
         setErrorMessage(err.message);
@@ -68,7 +61,6 @@ export const Login: React.FC = () => {
             onClick={() => {
               setIsRegister(false);
               setErrorMessage(null);
-              setSuccessMessage(null);
             }}
             className={`flex-1 py-2.5 text-sm font-semibold border-b-2 text-center transition ${
               !isRegister
@@ -83,7 +75,6 @@ export const Login: React.FC = () => {
             onClick={() => {
               setIsRegister(true);
               setErrorMessage(null);
-              setSuccessMessage(null);
             }}
             className={`flex-1 py-2.5 text-sm font-semibold border-b-2 text-center transition ${
               isRegister
@@ -94,12 +85,6 @@ export const Login: React.FC = () => {
             Register
           </button>
         </div>
-
-        {successMessage && (
-          <div className="p-3 text-xs bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-md font-medium">
-            {successMessage}
-          </div>
-        )}
 
         {errorMessage && (
           <div className="p-3 text-xs bg-rose-50 text-rose-800 border border-rose-300 rounded-md font-medium">

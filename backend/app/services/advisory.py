@@ -121,9 +121,7 @@ def build_advisory(
                 "score": result.score,
                 "severity": result.severity,
                 "primary_threat": result.primary_threat,
-                "hazard_indices": {
-                    k: round(v, 1) for k, v in result.hazard_indices.items()
-                },
+                "hazard_indices": {k: round(v, 1) for k, v in result.hazard_indices.items()},
             },
             "weather_digest": {
                 "peak_temperature_c": digest.peak_temp_c,

@@ -79,7 +79,6 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
         ],
         monitoring_focus="Check dense, tall field zones for leaning stalks and soil cracking around crowns.",
     ),
-
     # --- Rice / Paddy ---
     ("rice", "Extreme Heat"): Advisory(
         headline="Thermal Stress Advisory for Paddy Field",
@@ -156,7 +155,6 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
         ],
         monitoring_focus="Inspect prevailing wind margins for leaning panicles and waterlogged head contact.",
     ),
-
     # --- Cotton ---
     ("cotton", "Extreme Heat"): Advisory(
         headline="High Temperature Stress on Cotton",
@@ -233,7 +231,6 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
         ],
         monitoring_focus="Check main stems for lodging tilt and branches for mechanical snap injuries.",
     ),
-
     # --- Soybean ---
     ("soybean", "Extreme Heat"): Advisory(
         headline="Extreme Heat Warning for Soybean",
@@ -310,7 +307,6 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
         ],
         monitoring_focus="Check field edges and luxuriant stands for stem bending and soil mounding around roots.",
     ),
-
     # --- Maize ---
     ("maize", "Extreme Heat"): Advisory(
         headline="Heat Stress Advisory for Maize",
@@ -387,7 +383,6 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
         ],
         monitoring_focus="Check tall rows for leaning stalks and root displacement at the soil interface.",
     ),
-
     # --- Mustard ---
     ("mustard", "Extreme Heat"): Advisory(
         headline="Thermal Shock Advisory for Mustard",

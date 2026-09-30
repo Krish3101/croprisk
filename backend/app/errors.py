@@ -81,7 +81,9 @@ class UpstreamUnavailableError(AppError):
         )
 
 
-def _format_error_response(code: str, message: str, fields: dict[str, str] | None = None) -> dict[str, Any]:
+def _format_error_response(
+    code: str, message: str, fields: dict[str, str] | None = None
+) -> dict[str, Any]:
     err: dict[str, Any] = {"code": code, "message": message}
     if fields is not None:
         err["fields"] = fields
@@ -95,7 +97,9 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=exc.status_code, content=content)
 
     @app.exception_handler(RequestValidationError)
-    async def validation_error_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    async def validation_error_handler(
+        _request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
         fields: dict[str, str] = {}
         first_message = "Validation error."
         for err in exc.errors():
@@ -112,7 +116,9 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=422, content=content)
 
     @app.exception_handler(StarletteHTTPException)
-    async def http_exception_handler(_request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    async def http_exception_handler(
+        _request: Request, exc: StarletteHTTPException
+    ) -> JSONResponse:
         code_map = {
             401: "unauthorized",
             403: "unauthorized",
@@ -129,5 +135,7 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def generic_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
         logger.exception("Unhandled server exception: %s", exc)
-        content = _format_error_response("internal_error", "An unexpected internal server error occurred.")
+        content = _format_error_response(
+            "internal_error", "An unexpected internal server error occurred."
+        )
         return JSONResponse(status_code=500, content=content)

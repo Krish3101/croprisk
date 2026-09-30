@@ -63,9 +63,19 @@ def test_all_30_fallbacks_exist_and_validate():
 
 def test_fallback_free_of_chemical_names_and_doses():
     prohibited_words = [
-        "fungicide", "pesticide", "herbicide", "insecticide",
-        "mancozeb", "chlorpyrifos", "glyphosate", "imidacloprid",
-        "carbendazim", "ml/l", "g/l", "kg/ha", "litres per",
+        "fungicide",
+        "pesticide",
+        "herbicide",
+        "insecticide",
+        "mancozeb",
+        "chlorpyrifos",
+        "glyphosate",
+        "imidacloprid",
+        "carbendazim",
+        "ml/l",
+        "g/l",
+        "kg/ha",
+        "litres per",
     ]
     for key, adv in advice_data.FALLBACK_ADVISORIES.items():
         text = f"{adv.headline} {adv.impact_analysis} {' '.join(a.directive for a in adv.actions)} {adv.monitoring_focus}".lower()
@@ -87,17 +97,19 @@ def test_advisory_llm_success():
         "choices": [
             {
                 "message": {
-                    "content": json.dumps({
-                        "headline": "Severe Heat Warning for Flowering Wheat",
-                        "impact_analysis": "Daytime temperatures over 34 C cause pollen desiccation and floret sterility during anthesis, threatening severe grain yield loss.",
-                        "actions": [
-                            {
-                                "timeframe": "immediate_24h",
-                                "directive": "Apply light evening sprinkler irrigation to dampen the canopy and lower midday temperatures.",
-                            }
-                        ],
-                        "monitoring_focus": "Inspect flowering spikes for dried florets.",
-                    })
+                    "content": json.dumps(
+                        {
+                            "headline": "Severe Heat Warning for Flowering Wheat",
+                            "impact_analysis": "Daytime temperatures over 34 C cause pollen desiccation and floret sterility during anthesis, threatening severe grain yield loss.",
+                            "actions": [
+                                {
+                                    "timeframe": "immediate_24h",
+                                    "directive": "Apply light evening sprinkler irrigation to dampen the canopy and lower midday temperatures.",
+                                }
+                            ],
+                            "monitoring_focus": "Inspect flowering spikes for dried florets.",
+                        }
+                    )
                 }
             }
         ]
@@ -126,7 +138,7 @@ def test_advisory_llm_retry_and_fallback():
     )
 
     # Malformed response (missing required fields)
-    bad_llm_json = {"choices": [{"message": {"content": "{\"headline\": \"short\"}"}}]}
+    bad_llm_json = {"choices": [{"message": {"content": '{"headline": "short"}'}}]}
 
     with (
         patch.object(settings, "OPENROUTER_API_KEY", "fake-test-key"),

@@ -122,11 +122,7 @@ def update_plot(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> PlotSummary:
-    plot = (
-        db.query(Plot)
-        .filter(Plot.id == plot_id, Plot.user_id == current_user.id)
-        .first()
-    )
+    plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
     if not plot:
         raise NotFoundError(f"Plot {plot_id} not found.")
 
@@ -167,11 +163,7 @@ def update_plot(
     db.commit()
     db.refresh(plot)
 
-    risk = (
-        db.query(RiskAssessment)
-        .filter(RiskAssessment.plot_id == plot.id)
-        .first()
-    )
+    risk = db.query(RiskAssessment).filter(RiskAssessment.plot_id == plot.id).first()
     return _to_plot_summary(plot, risk)
 
 
@@ -181,11 +173,7 @@ def delete_plot(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> None:
-    plot = (
-        db.query(Plot)
-        .filter(Plot.id == plot_id, Plot.user_id == current_user.id)
-        .first()
-    )
+    plot = db.query(Plot).filter(Plot.id == plot_id, Plot.user_id == current_user.id).first()
     if not plot:
         raise NotFoundError(f"Plot {plot_id} not found.")
 

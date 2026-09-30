@@ -59,7 +59,6 @@ class GeocodeCandidate(BaseModel):
     city: str | None = None
     state: str | None = None
     country: str | None = None
-    country_code: str | None = None
     latitude: float
     longitude: float
 

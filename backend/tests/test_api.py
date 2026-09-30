@@ -45,20 +45,26 @@ def client():
 
 def test_auth_workflow(client):
     # 1. Register
-    reg_resp = client.post("/api/auth/register", json={"email": "farmer@example.com", "password": "password123"})
+    reg_resp = client.post(
+        "/api/auth/register", json={"email": "farmer@example.com", "password": "password123"}
+    )
     assert reg_resp.status_code == 201
     data = reg_resp.json()
     assert data["email"] == "farmer@example.com"
     assert COOKIE_NAME not in reg_resp.cookies  # register does not sign in
 
     # 2. Duplicate register fails with 409 email_taken
-    dup_resp = client.post("/api/auth/register", json={"email": "FARMER@EXAMPLE.COM", "password": "password123"})
+    dup_resp = client.post(
+        "/api/auth/register", json={"email": "FARMER@EXAMPLE.COM", "password": "password123"}
+    )
     assert dup_resp.status_code == 409
     err = dup_resp.json()["error"]
     assert err["code"] == "email_taken"
 
     # 3. Short password fails with 422 validation_error
-    short_pw = client.post("/api/auth/register", json={"email": "other@example.com", "password": "short"})
+    short_pw = client.post(
+        "/api/auth/register", json={"email": "other@example.com", "password": "short"}
+    )
     assert short_pw.status_code == 422
     assert short_pw.json()["error"]["code"] == "validation_error"
     assert "password" in short_pw.json()["error"]["fields"]
@@ -69,12 +75,16 @@ def test_auth_workflow(client):
     assert me_unauth.json()["error"]["code"] == "unauthorized"
 
     # 5. Login with invalid password gives 401 invalid_credentials
-    bad_login = client.post("/api/auth/login", json={"email": "farmer@example.com", "password": "wrongpassword"})
+    bad_login = client.post(
+        "/api/auth/login", json={"email": "farmer@example.com", "password": "wrongpassword"}
+    )
     assert bad_login.status_code == 401
     assert bad_login.json()["error"]["code"] == "invalid_credentials"
 
     # 6. Valid login gives 200 and sets session cookie
-    login_resp = client.post("/api/auth/login", json={"email": "farmer@example.com", "password": "password123"})
+    login_resp = client.post(
+        "/api/auth/login", json={"email": "farmer@example.com", "password": "password123"}
+    )
     assert login_resp.status_code == 200
     assert COOKIE_NAME in login_resp.cookies
 
@@ -90,18 +100,24 @@ def test_auth_workflow(client):
 
 def test_email_is_matched_exactly(client):
     # % and _ are wildcards in LIKE, so they must not match someone else's address.
-    client.post("/api/auth/register", json={"email": "farmer@example.com", "password": "password123"})
+    client.post(
+        "/api/auth/register", json={"email": "farmer@example.com", "password": "password123"}
+    )
 
     wildcard = client.post("/api/auth/login", json={"email": "%", "password": "password123"})
     assert wildcard.status_code == 401
 
-    similar = client.post("/api/auth/register", json={"email": "farm_r@example.com", "password": "password123"})
+    similar = client.post(
+        "/api/auth/register", json={"email": "farm_r@example.com", "password": "password123"}
+    )
     assert similar.status_code == 201
 
 
 def test_crops_catalogue_endpoint(client):
     client.post("/api/auth/register", json={"email": "user@example.com", "password": "password123"})
-    login = client.post("/api/auth/login", json={"email": "user@example.com", "password": "password123"})
+    login = client.post(
+        "/api/auth/login", json={"email": "user@example.com", "password": "password123"}
+    )
     cookies = login.cookies
 
     resp = client.get("/api/crops", cookies=cookies)
@@ -114,13 +130,21 @@ def test_crops_catalogue_endpoint(client):
 
 def test_plot_crud_and_isolation(client):
     # User 1
-    client.post("/api/auth/register", json={"email": "user1@example.com", "password": "password123"})
-    login1 = client.post("/api/auth/login", json={"email": "user1@example.com", "password": "password123"})
+    client.post(
+        "/api/auth/register", json={"email": "user1@example.com", "password": "password123"}
+    )
+    login1 = client.post(
+        "/api/auth/login", json={"email": "user1@example.com", "password": "password123"}
+    )
     cookies1 = login1.cookies
 
     # User 2
-    client.post("/api/auth/register", json={"email": "user2@example.com", "password": "password123"})
-    login2 = client.post("/api/auth/login", json={"email": "user2@example.com", "password": "password123"})
+    client.post(
+        "/api/auth/register", json={"email": "user2@example.com", "password": "password123"}
+    )
+    login2 = client.post(
+        "/api/auth/login", json={"email": "user2@example.com", "password": "password123"}
+    )
     cookies2 = login2.cookies
 
     # User 1 creates plot with stage mismatch
@@ -178,7 +202,9 @@ def test_plot_crud_and_isolation(client):
     assert risk_other.status_code == 404
 
     # User 1 patches plot
-    patch_own = client.patch(f"/api/plots/{plot1_id}", cookies=cookies1, json={"name": "North Field Updated"})
+    patch_own = client.patch(
+        f"/api/plots/{plot1_id}", cookies=cookies1, json={"name": "North Field Updated"}
+    )
     assert patch_own.status_code == 200
     assert patch_own.json()["name"] == "North Field Updated"
 
@@ -192,7 +218,9 @@ def test_plot_crud_and_isolation(client):
 
 def test_risk_evaluation_endpoint(client):
     client.post("/api/auth/register", json={"email": "user@example.com", "password": "password123"})
-    login = client.post("/api/auth/login", json={"email": "user@example.com", "password": "password123"})
+    login = client.post(
+        "/api/auth/login", json={"email": "user@example.com", "password": "password123"}
+    )
     cookies = login.cookies
 
     create_resp = client.post(
@@ -212,7 +240,7 @@ def test_risk_evaluation_endpoint(client):
 
     mock_forecast = [
         ForecastInterval(
-            timestamp=f"2026-09-10T{i*3:02d}:00:00Z",
+            timestamp=f"2026-09-10T{i * 3:02d}:00:00Z",
             temperature_c=38.0,
             relative_humidity=40.0,
             wind_kmh=5.0,

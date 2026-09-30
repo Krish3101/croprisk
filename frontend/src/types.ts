@@ -27,7 +27,6 @@ export interface GeocodeCandidate {
   city: string | null;
   state: string | null;
   country: string | null;
-  country_code: string | null;
   latitude: number;
   longitude: number;
 }
