@@ -22,9 +22,17 @@ if [ ! -d "$ROOT_DIR/backend/.venv" ]; then
     "$ROOT_DIR/backend/.venv/bin/pip" install -e "$ROOT_DIR/backend[dev]"
 fi
 
-if [ ! -f "$ROOT_DIR/backend/.env" ]; then
+ENV_FILE="$ROOT_DIR/backend/.env"
+if [ ! -f "$ENV_FILE" ]; then
     echo "Creating backend/.env from backend/.env.example..."
-    cp "$ROOT_DIR/backend/.env.example" "$ROOT_DIR/backend/.env"
+    cp "$ROOT_DIR/backend/.env.example" "$ENV_FILE"
+fi
+
+if ! grep -q '^JWT_SECRET=.' "$ENV_FILE"; then
+    echo "Generating JWT_SECRET in backend/.env..."
+    grep -v '^JWT_SECRET=' "$ENV_FILE" > "$ENV_FILE.tmp" || true
+    echo "JWT_SECRET=$(python3 -c 'import secrets; print(secrets.token_hex(32))')" >> "$ENV_FILE.tmp"
+    mv "$ENV_FILE.tmp" "$ENV_FILE"
 fi
 
 if [ ! -d "$ROOT_DIR/frontend/node_modules" ]; then

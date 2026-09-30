@@ -54,7 +54,7 @@ By hand:
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env          # then add your OpenWeather key
+cp .env.example .env          # then set JWT_SECRET to a long random string and add your OpenWeather key
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -64,7 +64,8 @@ npm install
 npm run dev
 ```
 
-`JWT_SECRET` and `OPENWEATHER_API_KEY` are both needed for the app to do anything useful.
+`JWT_SECRET` and `OPENWEATHER_API_KEY` are both needed for the app to do anything useful
+(`start.sh` generates the first one for you).
 Accounts and plots work without the weather key, but scoring a plot is the whole point and
 it calls OpenWeather, so without that key `/api/plots/{id}/risk` and `/api/geocode` return
 503. `OPENROUTER_API_KEY` is the genuinely optional one.
