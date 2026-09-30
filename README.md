@@ -1,5 +1,7 @@
 # CropRisk
 
+[![tests](https://github.com/Krish3101/croprisk/actions/workflows/tests.yml/badge.svg)](https://github.com/Krish3101/croprisk/actions/workflows/tests.yml)
+
 Turns a five-day weather forecast into a risk score for a specific crop at its current
 growth stage, so a farmer gets "your wheat is at high risk of heat damage this week"
 instead of "38 °C and 40 mm of rain".
@@ -40,6 +42,8 @@ rather than an error — you can still see last night's reading. Unless the stag
 on, in which case stale data would be actively misleading, and the request fails instead.
 
 ## Running it
+
+Needs Python 3.12 or newer and Node.js.
 
 ```bash
 ./scripts/start.sh
