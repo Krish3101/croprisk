@@ -16,8 +16,8 @@ thresholds for that crop and that stage.
 
 ## The score is arithmetic, and the model never touches it
 
-Five hazards are scored separately — heat, frost, excess rain, fungal disease risk, and
-wind lodging — each against thresholds defined per crop and growth stage. They're combined
+Five hazards are scored separately (heat, frost, excess rain, fungal disease risk, and
+wind lodging), each against thresholds defined per crop and growth stage. They're combined
 using stage-specific weights into a 0–100 score, a severity band, and whichever hazard
 contributed most.
 
@@ -38,7 +38,7 @@ Advancing a plot's growth stage throws the cache away immediately, because the s
 answers a question about a stage the crop has left.
 
 If the weather provider is unreachable, a stored assessment is served with `is_stale: true`
-rather than an error — you can still see last night's reading. Unless the stage has moved
+rather than an error, so you can still see last night's reading. Unless the stage has moved
 on, in which case stale data would be actively misleading, and the request fails instead.
 
 ## Running it
