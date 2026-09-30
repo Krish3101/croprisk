@@ -41,25 +41,32 @@ BYPASS_ADVISORY = Advisory(
 )
 
 
+# Free on OpenRouter. If OpenRouter retires it, this is the one line to change.
+MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+
+
 def _call_openrouter(user_facts_json: str) -> Advisory | None:
-    """Call OpenRouter API once with 8s timeout and validate against Advisory schema."""
+    """Call OpenRouter once and validate the reply against the Advisory schema."""
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
     }
     payload = {
-        "model": settings.LLM_MODEL,
+        "model": MODEL,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_facts_json},
         ],
         "temperature": 0.2,
         "response_format": {"type": "json_object"},
+        # Thinking only slows the reply down; the facts are already worked out.
+        "reasoning": {"enabled": False},
     }
 
     try:
-        with httpx.Client(timeout=8.0) as client:
+        # Free models are slow; past 30s the written fallback is the better answer.
+        with httpx.Client(timeout=30.0) as client:
             resp = client.post(url, headers=headers, json=payload)
             if resp.status_code != 200:
                 logger.warning("OpenRouter returned status %s: %s", resp.status_code, resp.text)
