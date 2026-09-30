@@ -10,6 +10,8 @@ The same weather means different things to different crops. Wheat at flowering i
 vulnerable to heat than wheat that has already ripened, so the score is calculated against
 thresholds for that crop and that stage.
 
+**Stack:** FastAPI, SQLAlchemy on SQLite, bcrypt and JWT, the OpenWeather API; React, TypeScript, React Query, Recharts, Tailwind CSS, Vite, Vitest.
+
 ![Three fields sorted by risk](docs/dashboard.png)
 
 ![One field: hazard breakdown, advice, and the forecast against the stage's thresholds](docs/plot.png)
