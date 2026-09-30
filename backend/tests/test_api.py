@@ -88,6 +88,17 @@ def test_auth_workflow(client):
     assert logout_resp.status_code == 204
 
 
+def test_email_is_matched_exactly(client):
+    # % and _ are wildcards in LIKE, so they must not match someone else's address.
+    client.post("/api/auth/register", json={"email": "farmer@example.com", "password": "password123"})
+
+    wildcard = client.post("/api/auth/login", json={"email": "%", "password": "password123"})
+    assert wildcard.status_code == 401
+
+    similar = client.post("/api/auth/register", json={"email": "farm_r@example.com", "password": "password123"})
+    assert similar.status_code == 201
+
+
 def test_crops_catalogue_endpoint(client):
     client.post("/api/auth/register", json={"email": "user@example.com", "password": "password123"})
     login = client.post("/api/auth/login", json={"email": "user@example.com", "password": "password123"})
