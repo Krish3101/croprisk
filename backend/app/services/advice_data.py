@@ -3,7 +3,7 @@
 from app.schemas import Action, Advisory
 
 FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
-    # --- Wheat ---
+    # Wheat
     ("wheat", "Extreme Heat"): Advisory(
         headline="Extreme Heat Advisory for Wheat",
         impact_analysis="Elevated temperatures accelerate leaf senescence and induce floret sterility during anthesis. High thermal stress also limits grain filling duration, reducing final yield and kernel plumpness.",
@@ -79,7 +79,7 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
         ],
         monitoring_focus="Check dense, tall field zones for leaning stalks and soil cracking around crowns.",
     ),
-    # --- Rice / Paddy ---
+    # Rice / Paddy
     ("rice", "Extreme Heat"): Advisory(
         headline="Thermal Stress Advisory for Paddy Field",
         impact_analysis="Excessive daytime temperatures during panicle initiation or anthesis cause pollen desiccation and spikelet sterility. High heat also accelerates water loss from flooded paddies.",
@@ -155,7 +155,7 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
         ],
         monitoring_focus="Inspect prevailing wind margins for leaning panicles and waterlogged head contact.",
     ),
-    # --- Cotton ---
+    # Cotton
     ("cotton", "Extreme Heat"): Advisory(
         headline="High Temperature Stress on Cotton",
         impact_analysis="Intense heat waves induce square and young boll shedding due to ethylene buildup. High thermal load during flowering disrupts pollen viability and reduces boll retention.",
@@ -231,7 +231,7 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
         ],
         monitoring_focus="Check main stems for lodging tilt and branches for mechanical snap injuries.",
     ),
-    # --- Soybean ---
+    # Soybean
     ("soybean", "Extreme Heat"): Advisory(
         headline="Extreme Heat Warning for Soybean",
         impact_analysis="Daytime temperatures above threshold cause flower abortion and poor pod set in soybean canopies. Excessive heat during pod fill causes seed shrivelling and accelerated leaf drop.",
@@ -307,7 +307,7 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
         ],
         monitoring_focus="Check field edges and luxuriant stands for stem bending and soil mounding around roots.",
     ),
-    # --- Maize ---
+    # Maize
     ("maize", "Extreme Heat"): Advisory(
         headline="Heat Stress Advisory for Maize",
         impact_analysis="Severe heat during tasseling and silking dehydrates silks and kills pollen grains within hours. Silk desynchronization results in barren cobs and severe grain yield reduction.",
@@ -383,7 +383,7 @@ FALLBACK_ADVISORIES: dict[tuple[str, str], Advisory] = {
         ],
         monitoring_focus="Check tall rows for leaning stalks and root displacement at the soil interface.",
     ),
-    # --- Mustard ---
+    # Mustard
     ("mustard", "Extreme Heat"): Advisory(
         headline="Thermal Shock Advisory for Mustard",
         impact_analysis="Warm dry weather during flowering causes bud drying, flower drop, and rapid pod abortion in mustard. High temperatures during siliqua filling drastically reduce seed size and oil content.",
