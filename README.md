@@ -8,6 +8,10 @@ The same weather means different things to different crops. Wheat at flowering i
 vulnerable to heat than wheat that has already ripened, so the score is calculated against
 thresholds for that crop and that stage.
 
+![Three fields sorted by risk](docs/dashboard.png)
+
+![One field: hazard breakdown, advice, and the forecast against the stage's thresholds](docs/plot.png)
+
 ## The score is arithmetic, and the model never touches it
 
 Five hazards are scored separately — heat, frost, excess rain, fungal disease risk, and
