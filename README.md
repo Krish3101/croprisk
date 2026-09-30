@@ -1,5 +1,7 @@
 # CropRisk
 
+[![tests](https://github.com/Krish3101/croprisk/actions/workflows/tests.yml/badge.svg)](https://github.com/Krish3101/croprisk/actions/workflows/tests.yml)
+
 Turns a five-day weather forecast into a risk score for a specific crop at its current
 growth stage, so a farmer gets "your wheat is at high risk of heat damage this week"
 instead of "38 °C and 40 mm of rain".
@@ -8,14 +10,16 @@ The same weather means different things to different crops. Wheat at flowering i
 vulnerable to heat than wheat that has already ripened, so the score is calculated against
 thresholds for that crop and that stage.
 
+**Stack:** FastAPI, SQLAlchemy on SQLite, bcrypt and JWT, the OpenWeather API; React, TypeScript, React Query, Recharts, Tailwind CSS, Vite, Vitest.
+
 ![Three fields sorted by risk](docs/dashboard.png)
 
 ![One field: hazard breakdown, advice, and the forecast against the stage's thresholds](docs/plot.png)
 
 ## The score is arithmetic, and the model never touches it
 
-Five hazards are scored separately — heat, frost, excess rain, fungal disease risk, and
-wind lodging — each against thresholds defined per crop and growth stage. They're combined
+Five hazards are scored separately (heat, frost, excess rain, fungal disease risk, and
+wind lodging), each against thresholds defined per crop and growth stage. They're combined
 using stage-specific weights into a 0–100 score, a severity band, and whichever hazard
 contributed most.
 
@@ -36,10 +40,12 @@ Advancing a plot's growth stage throws the cache away immediately, because the s
 answers a question about a stage the crop has left.
 
 If the weather provider is unreachable, a stored assessment is served with `is_stale: true`
-rather than an error — you can still see last night's reading. Unless the stage has moved
+rather than an error, so you can still see last night's reading. Unless the stage has moved
 on, in which case stale data would be actively misleading, and the request fails instead.
 
 ## Running it
+
+Needs Python 3.12 or newer and Node.js.
 
 ```bash
 ./scripts/start.sh

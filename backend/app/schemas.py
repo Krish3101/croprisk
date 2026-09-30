@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-# --- Auth ---
+# Auth
 class RegisterRequest(BaseModel):
     email: str = Field(..., min_length=3, max_length=255)
     password: str = Field(..., min_length=8, max_length=128)
@@ -36,7 +36,7 @@ class UserResponse(BaseModel):
     email: str
 
 
-# --- Crops & Stages ---
+# Crops & Stages
 class StageSummary(BaseModel):
     id: str
     name: str
@@ -53,7 +53,7 @@ class CropSummary(BaseModel):
     stages: list[StageSummary]
 
 
-# --- Geocoding ---
+# Geocoding
 class GeocodeCandidate(BaseModel):
     display_name: str
     city: str | None = None
@@ -63,7 +63,7 @@ class GeocodeCandidate(BaseModel):
     longitude: float
 
 
-# --- Advisory ---
+# Advisory
 class Action(BaseModel):
     timeframe: Literal["immediate_24h", "preventative_72h"]
     directive: str = Field(..., min_length=15, max_length=200)
@@ -80,7 +80,7 @@ class AdvisoryResponse(Advisory):
     source: Literal["bypass", "llm", "fallback"]
 
 
-# --- Plots ---
+# Plots
 class PlotCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     crop_id: str
@@ -123,7 +123,7 @@ class PlotUpdateRequest(BaseModel):
         return v
 
 
-# --- Dashboard Plot Summary ---
+# Dashboard Plot Summary
 class CropRef(BaseModel):
     id: str
     common_name: str
@@ -156,7 +156,7 @@ class PlotSummary(BaseModel):
     latest_risk: LatestRiskSummary | None
 
 
-# --- Risk Detail View ---
+# Risk Detail View
 class PlotDetailInfo(BaseModel):
     id: int
     name: str

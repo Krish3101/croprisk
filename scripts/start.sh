@@ -9,6 +9,11 @@ if ! command -v python3 &>/dev/null; then
     exit 1
 fi
 
+if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))'; then
+    echo "Error: CropRisk needs Python 3.12 or newer (found $(python3 --version))."
+    exit 1
+fi
+
 if ! command -v npm &>/dev/null; then
     echo "Error: npm is not installed or not in PATH."
     exit 1
