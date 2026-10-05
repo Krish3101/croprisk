@@ -4,6 +4,18 @@ set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
+API_PORT="${API_PORT:-8000}"
+WEB_PORT="${WEB_PORT:-5173}"
+
+if [ "$1" = "--reset" ]; then
+    echo "Resetting database and caches..."
+    rm -f "$ROOT_DIR/backend/croprisk.db"*
+    rm -rf "$ROOT_DIR/backend/.pytest_cache" "$ROOT_DIR/backend/.ruff_cache" "$ROOT_DIR/backend/.coverage" "$ROOT_DIR/frontend/dist"
+    find "$ROOT_DIR/backend" -name __pycache__ -type d -not -path "$ROOT_DIR/backend/.venv/*" -exec rm -rf {} + 2>/dev/null || true
+    echo "Reset complete."
+    exit 0
+fi
+
 if ! command -v python3 &>/dev/null; then
     echo "Error: python3 is not installed or not in PATH."
     exit 1
@@ -21,10 +33,13 @@ fi
 
 if [ ! -d "$ROOT_DIR/backend/.venv" ]; then
     echo "Creating Python virtual environment in backend/.venv..."
-    python3 -m venv "$ROOT_DIR/backend/.venv"
-    echo "Installing backend dependencies..."
-    "$ROOT_DIR/backend/.venv/bin/pip" install --upgrade pip
-    "$ROOT_DIR/backend/.venv/bin/pip" install -e "$ROOT_DIR/backend[dev]"
+    if command -v uv &>/dev/null; then
+        (cd "$ROOT_DIR/backend" && uv sync --extra dev --locked)
+    else
+        python3 -m venv "$ROOT_DIR/backend/.venv"
+        "$ROOT_DIR/backend/.venv/bin/pip" install --upgrade pip
+        "$ROOT_DIR/backend/.venv/bin/pip" install -e "$ROOT_DIR/backend[dev]"
+    fi
 fi
 
 ENV_FILE="$ROOT_DIR/backend/.env"
@@ -33,16 +48,9 @@ if [ ! -f "$ENV_FILE" ]; then
     cp "$ROOT_DIR/backend/.env.example" "$ENV_FILE"
 fi
 
-if ! grep -q '^JWT_SECRET=.' "$ENV_FILE"; then
-    echo "Generating JWT_SECRET in backend/.env..."
-    grep -v '^JWT_SECRET=' "$ENV_FILE" > "$ENV_FILE.tmp" || true
-    echo "JWT_SECRET=$(python3 -c 'import secrets; print(secrets.token_hex(32))')" >> "$ENV_FILE.tmp"
-    mv "$ENV_FILE.tmp" "$ENV_FILE"
-fi
-
 if [ ! -d "$ROOT_DIR/frontend/node_modules" ]; then
     echo "Installing frontend dependencies in frontend/..."
-    (cd "$ROOT_DIR/frontend" && npm install)
+    (cd "$ROOT_DIR/frontend" && npm ci)
 fi
 
 BACKEND_PID=""
@@ -62,20 +70,35 @@ cleanup() {
 
 trap cleanup SIGINT SIGTERM EXIT
 
-echo "Starting backend (FastAPI) on port 8000..."
+echo "Starting backend (FastAPI) on port $API_PORT..."
 (
     cd "$ROOT_DIR/backend"
     source .venv/bin/activate
-    exec uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+    exec uvicorn app.main:app --reload --host 127.0.0.1 --port "$API_PORT"
 ) &
 BACKEND_PID=$!
 
-echo "Starting frontend (Vite/React) on port 5173..."
+echo "Starting frontend (Vite/React) on port $WEB_PORT..."
 (
     cd "$ROOT_DIR/frontend"
-    exec npm run dev -- --host 127.0.0.1 --port 5173
+    # Run vite directly (not through npm) so the kill in cleanup reaches it.
+    exec ./node_modules/.bin/vite --host 127.0.0.1 --port "$WEB_PORT"
 ) &
 FRONTEND_PID=$!
 
-echo "Open http://localhost:5173 (API docs at http://localhost:8000/docs). Ctrl+C stops both."
+# Wait for the API before printing the URL.
+healthy=""
+for _ in $(seq 1 30); do
+    if curl -sf "http://127.0.0.1:$API_PORT/api/health" >/dev/null; then
+        healthy=1
+        break
+    fi
+    sleep 1
+done
+if [ -z "$healthy" ]; then
+    echo "Backend did not start; see the error above."
+    exit 1
+fi
+
+echo "Open http://localhost:$WEB_PORT (API docs at http://localhost:$API_PORT/docs). Ctrl+C stops both."
 wait "$BACKEND_PID" "$FRONTEND_PID"
