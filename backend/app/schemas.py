@@ -1,39 +1,31 @@
-"""Pydantic schemas for request validation and response serialization."""
+"""Pydantic request and response models. Requests forbid unknown fields and trim strings."""
 
 import datetime
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
-# Auth
-class RegisterRequest(BaseModel):
-    email: str = Field(..., min_length=3, max_length=255)
-    password: str = Field(..., min_length=8, max_length=128)
-
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, v: str) -> str:
-        v = v.strip().lower()
-        if "@" not in v or "." not in v.split("@")[-1]:
-            raise ValueError("Invalid email format.")
-        return v
+# Advisory (also the shape the LLM must reply with)
 
 
-class LoginRequest(BaseModel):
-    email: str
-    password: str
+class Action(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    @field_validator("email")
-    @classmethod
-    def normalize_email(cls, v: str) -> str:
-        return v.strip().lower()
+    timeframe: Literal["immediate_24h", "preventative_72h"]
+    directive: str = Field(..., min_length=15, max_length=250)
 
 
-class UserResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    email: str
+class Advisory(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    headline: str = Field(..., min_length=10, max_length=140)
+    impact_analysis: str = Field(..., min_length=30, max_length=400)
+    actions: list[Action] = Field(..., min_length=1, max_length=3)
+    monitoring_focus: str = Field(..., min_length=15, max_length=200)
+
+
+class AdvisoryResponse(Advisory):
+    source: Literal["bypass", "llm", "fallback"]
 
 
 # Crops & Stages
@@ -63,32 +55,24 @@ class GeocodeCandidate(BaseModel):
     longitude: float
 
 
-# Advisory
-class Action(BaseModel):
-    timeframe: Literal["immediate_24h", "preventative_72h"]
-    directive: str = Field(..., min_length=15, max_length=200)
-
-
-class Advisory(BaseModel):
-    headline: str = Field(..., min_length=10, max_length=120)
-    impact_analysis: str = Field(..., min_length=40, max_length=350)
-    actions: list[Action] = Field(..., min_length=1, max_length=2)
-    monitoring_focus: str = Field(..., min_length=15, max_length=150)
-
-
-class AdvisoryResponse(Advisory):
-    source: Literal["bypass", "llm", "fallback"]
-
-
-# Plots
+# Plots Request / Response Models
 class PlotCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
     name: str = Field(..., min_length=1, max_length=100)
-    crop_id: str
-    stage_id: str
-    location_name: str = Field(..., min_length=1)
+    crop_id: str = Field(..., min_length=1, max_length=50)
+    stage_id: str = Field(..., min_length=1, max_length=100)
+    location_name: str = Field(..., min_length=1, max_length=200)
     latitude: float = Field(..., ge=-90.0, le=90.0)
     longitude: float = Field(..., ge=-180.0, le=180.0)
     sowing_date: datetime.date
+
+    @field_validator("name")
+    @classmethod
+    def validate_name_not_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Field name cannot be empty or whitespace only.")
+        return v.strip()
 
     @field_validator("sowing_date")
     @classmethod
@@ -102,13 +86,22 @@ class PlotCreateRequest(BaseModel):
 
 
 class PlotUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
     name: str | None = Field(default=None, min_length=1, max_length=100)
-    crop_id: str | None = None
-    stage_id: str | None = None
-    location_name: str | None = Field(default=None, min_length=1)
+    crop_id: str | None = Field(default=None, min_length=1, max_length=50)
+    stage_id: str | None = Field(default=None, min_length=1, max_length=100)
+    location_name: str | None = Field(default=None, min_length=1, max_length=200)
     latitude: float | None = Field(default=None, ge=-90.0, le=90.0)
     longitude: float | None = Field(default=None, ge=-180.0, le=180.0)
     sowing_date: datetime.date | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name_not_blank(cls, v: str | None) -> str | None:
+        if v is not None and (not v or not v.strip()):
+            raise ValueError("Field name cannot be empty or whitespace only.")
+        return v.strip() if v is not None else None
 
     @field_validator("sowing_date")
     @classmethod
@@ -121,6 +114,14 @@ class PlotUpdateRequest(BaseModel):
         if (today - v).days > 400:
             raise ValueError("Sowing date cannot be more than 400 days in the past.")
         return v
+
+    @model_validator(mode="after")
+    def reject_nulls(self) -> "PlotUpdateRequest":
+        # Fields can be left out, but not sent as null.
+        for name in self.model_fields_set:
+            if getattr(self, name) is None:
+                raise ValueError(f"{name} cannot be null.")
+        return self
 
 
 # Dashboard Plot Summary
@@ -140,7 +141,7 @@ class LatestRiskSummary(BaseModel):
     severity: str
     primary_threat: str
     created_at: str
-    is_stale: bool = False
+    is_stale: bool
 
 
 class PlotSummary(BaseModel):
@@ -149,49 +150,41 @@ class PlotSummary(BaseModel):
     crop: CropRef
     stage: StageRef
     location_name: str
-    latitude: float | None = None
-    longitude: float | None = None
+    latitude: float
+    longitude: float
     sowing_date: str
     days_after_sowing: int
-    latest_risk: LatestRiskSummary | None
+    latest_risk: LatestRiskSummary | None = None
 
 
-# Risk Detail View
+# Detailed Plot Risk Evaluation Response
 class PlotDetailInfo(BaseModel):
     id: int
     name: str
     crop: str
-    crop_id: str | None = None
+    crop_id: str
     scientific_name: str
     stage: str
-    stage_id: str | None = None
+    stage_id: str
     bbch: str
     location_name: str
-    latitude: float | None = None
-    longitude: float | None = None
+    latitude: float
+    longitude: float
     sowing_date: str
     days_after_sowing: int
 
 
-class RiskDetailInfo(BaseModel):
+class RiskDetail(BaseModel):
     score: int
     severity: str
     primary_threat: str
     hazard_indices: dict[str, float]
     created_at: str
     is_stale: bool
+    forecast_fetched_at: str
 
 
-class WeatherDigestSchema(BaseModel):
-    peak_temp_c: float
-    min_temp_c: float
-    total_rain_mm: float
-    max_wind_kmh: float
-    peak_humidity_pct: float
-    longest_disease_window_h: int
-
-
-class ForecastIntervalSchema(BaseModel):
+class IntervalItem(BaseModel):
     timestamp: str
     temperature_c: float
     relative_humidity: float
@@ -199,13 +192,24 @@ class ForecastIntervalSchema(BaseModel):
     rain_mm: float
 
 
-class WeatherInfo(BaseModel):
-    digest: WeatherDigestSchema
-    intervals: list[ForecastIntervalSchema]
+class WeatherSection(BaseModel):
+    digest: dict[str, Any]
+    intervals: list[IntervalItem]
 
 
 class PlotRiskResponse(BaseModel):
     plot: PlotDetailInfo
-    risk: RiskDetailInfo
+    risk: RiskDetail
     advisory: AdvisoryResponse
-    weather: WeatherInfo
+    weather: WeatherSection
+    refreshed: bool = False
+
+
+# Health check response
+class HealthResponse(BaseModel):
+    status: str
+    db: bool
+    weather_key: bool
+    llm_key: bool
+    catalogue_version: str
+    schema_version: int
