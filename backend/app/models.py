@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models."""
+"""SQLAlchemy models. Single-user local app, so plots have no owner."""
 
 import datetime
 
@@ -7,7 +7,6 @@ from sqlalchemy import (
     Date,
     Float,
     ForeignKey,
-    Index,
     Integer,
     String,
     Text,
@@ -17,40 +16,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 
 
-class User(Base):
-    __tablename__ = "users"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    email: Mapped[str] = mapped_column(
-        String,
-        unique=True,
-        nullable=False,
-        index=True,
-    )
-    password_hash: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[str] = mapped_column(Text, nullable=False)
-
-    plots: Mapped[list["Plot"]] = relationship(
-        "Plot",
-        back_populates="user",
-        cascade="all, delete-orphan",
-    )
-
-
 class Plot(Base):
     __tablename__ = "plots"
     __table_args__ = (
+        CheckConstraint("length(trim(name)) > 0", name="chk_plots_name_not_empty"),
         CheckConstraint("latitude BETWEEN -90 AND 90", name="chk_plots_latitude"),
         CheckConstraint("longitude BETWEEN -180 AND 180", name="chk_plots_longitude"),
-        Index("ix_plots_user", "user_id"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-    )
     name: Mapped[str] = mapped_column(String, nullable=False)
     crop_id: Mapped[str] = mapped_column(String, nullable=False)
     stage_id: Mapped[str] = mapped_column(String, nullable=False)
@@ -61,7 +35,6 @@ class Plot(Base):
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
     updated_at: Mapped[str] = mapped_column(Text, nullable=False)
 
-    user: Mapped["User"] = relationship("User", back_populates="plots")
     risk_assessment: Mapped["RiskAssessment | None"] = relationship(
         "RiskAssessment",
         back_populates="plot",
@@ -89,13 +62,16 @@ class RiskAssessment(Base):
         ForeignKey("plots.id", ondelete="CASCADE"),
         primary_key=True,
     )
+    # The inputs this row was scored with, compared against the plot to decide if it is still valid.
+    location_key: Mapped[str] = mapped_column(String, nullable=False)
+    stage_id: Mapped[str] = mapped_column(String, nullable=False)
+    catalogue_version: Mapped[str] = mapped_column(String, nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     severity: Mapped[str] = mapped_column(String, nullable=False)
     primary_threat: Mapped[str] = mapped_column(String, nullable=False)
-    hazard_indices: Mapped[str] = mapped_column(
-        Text, nullable=False
-    )  # JSON {heat,frost,precip,disease,wind}
+    hazard_indices: Mapped[str] = mapped_column(Text, nullable=False)  # JSON
     forecast: Mapped[str] = mapped_column(Text, nullable=False)  # JSON normalised intervals
+    forecast_fetched_at: Mapped[str] = mapped_column(Text, nullable=False)
     advisory: Mapped[str] = mapped_column(Text, nullable=False)  # JSON Advisory
     advisory_source: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
