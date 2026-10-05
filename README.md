@@ -1,7 +1,5 @@
 # CropRisk
 
-[![tests](https://github.com/Krish3101/croprisk/actions/workflows/tests.yml/badge.svg)](https://github.com/Krish3101/croprisk/actions/workflows/tests.yml)
-
 A heat wave of 35 °C means grain loss for wheat at flowering, and very little for wheat that has already ripened. Generic weather apps can't tell those two fields apart.
 
 Same weather, different risk: CropRisk scores a 5-day forecast into a 0–100 risk for one field's crop and growth stage across five hazards. A pure, test-vector-checked engine makes the number; an LLM only explains it.
