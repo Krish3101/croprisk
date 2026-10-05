@@ -1,6 +1,7 @@
-"""Weather service: geocoding and 5-day / 3-hour forecast normalization."""
+"""OpenWeather geocoding and the 5-day / 3-hour forecast, checked and normalised."""
 
 import datetime
+import logging
 
 import httpx
 
@@ -8,55 +9,65 @@ from app.config import settings
 from app.domain.engine import ForecastInterval, InsufficientForecast
 from app.errors import UpstreamUnavailableError
 
+logger = logging.getLogger("croprisk")
 
-def geocode(query: str) -> list[dict]:
-    """Search for locations using OpenWeatherMap Geocoding API."""
-    clean_query = query.strip()
-    if not clean_query:
-        return []
+CADENCE_SECONDS = 3 * 3600
+MIN_INTERVALS = 8  # 24 h of data
 
+
+def _get_json(url: str, params: dict):
+    """GET an OpenWeather endpoint. Every failure becomes UpstreamUnavailableError (503)."""
     if not settings.OPENWEATHER_API_KEY:
         raise UpstreamUnavailableError("Weather service API key is not configured.")
-
-    url = "https://api.openweathermap.org/geo/1.0/direct"
-    params = {
-        "q": clean_query,
-        "limit": 5,
-        "appid": settings.OPENWEATHER_API_KEY,
-    }
-
     try:
         with httpx.Client(timeout=5.0) as client:
-            resp = client.get(url, params=params)
-            if resp.status_code != 200:
-                raise UpstreamUnavailableError(
-                    f"Geocoding provider returned status {resp.status_code}"
-                )
-            items = resp.json()
-    except (httpx.RequestError, httpx.TimeoutException) as exc:
-        raise UpstreamUnavailableError("Geocoding service timed out or failed.") from exc
+            resp = client.get(url, params={**params, "appid": settings.OPENWEATHER_API_KEY})
+    except httpx.HTTPError as exc:
+        # str(exc) can include the URL, which has the key in it, so log the type only.
+        logger.warning("OpenWeather request failed: %s", type(exc).__name__)
+        raise UpstreamUnavailableError("Weather service timed out or failed.") from None
+
+    if resp.status_code == 401:
+        logger.warning("OPENWEATHER_API_KEY rejected by OpenWeather (HTTP 401).")
+        raise UpstreamUnavailableError("Weather service authentication rejected.")
+    if resp.status_code == 429:
+        logger.warning("OpenWeather rate limited (HTTP 429).")
+        raise UpstreamUnavailableError("Weather service rate limit exceeded.")
+    if resp.status_code != 200:
+        raise UpstreamUnavailableError(f"Weather service returned status {resp.status_code}.")
+    try:
+        return resp.json()
+    except ValueError:
+        raise UpstreamUnavailableError("Weather service returned malformed JSON.") from None
+
+
+def geocode(query: str) -> list[dict]:
+    """Up to 5 places matching the query, without duplicates."""
+    query = query.strip()
+    if not query:
+        return []
+    items = _get_json("https://api.openweathermap.org/geo/1.0/direct", {"q": query, "limit": 5})
+    if not isinstance(items, list):
+        raise UpstreamUnavailableError("Geocoding returned an unexpected response.")
 
     results: list[dict] = []
     seen: set[tuple[float, float]] = set()
-
     for item in items:
-        lat = float(item.get("lat", 0.0))
-        lon = float(item.get("lon", 0.0))
-        key = (round(lat, 3), round(lon, 3))
-        if key in seen:
+        if not isinstance(item, dict):
             continue
-        seen.add(key)
+        try:
+            lat, lon = float(item["lat"]), float(item["lon"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if (round(lat, 3), round(lon, 3)) in seen:
+            continue
+        seen.add((round(lat, 3), round(lon, 3)))
 
-        name = item.get("name", "")
-        state = item.get("state")
-        country = item.get("country")
-
+        name, state, country = item.get("name", ""), item.get("state"), item.get("country")
         parts = [p for p in [name, state, country] if p]
-        display_name = ", ".join(parts) if parts else f"{lat:.4f}, {lon:.4f}"
-
         results.append(
             {
-                "display_name": display_name,
+                "display_name": ", ".join(parts) if parts else f"{lat:.4f}, {lon:.4f}",
                 "city": name or None,
                 "state": state,
                 "country": country,
@@ -64,68 +75,70 @@ def geocode(query: str) -> list[dict]:
                 "longitude": lon,
             }
         )
-        if len(results) >= 5:
-            break
+    return results[:5]
 
-    return results
+
+def _parse_entry(entry) -> tuple[int, ForecastInterval] | None:
+    """One forecast entry, or None if it is missing data we can't default."""
+    if not isinstance(entry, dict):
+        return None
+    main = entry.get("main")
+    wind = entry.get("wind")
+    if not isinstance(main, dict) or not isinstance(wind, dict):
+        return None
+    try:
+        dt = int(entry["dt"])
+        temp = float(main["temp"])
+        rh = float(main["humidity"])
+        speed = float(wind["speed"])
+        gust = float(wind.get("gust", speed))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+    # Only rain may default to 0: OpenWeather leaves it out when it doesn't rain.
+    rain = entry.get("rain")
+    try:
+        rain_mm = float(rain.get("3h", 0.0)) if isinstance(rain, dict) else 0.0
+    except (TypeError, ValueError):
+        rain_mm = 0.0
+
+    return dt, ForecastInterval(
+        timestamp=datetime.datetime.fromtimestamp(dt, datetime.UTC).isoformat(),
+        temperature_c=temp,
+        relative_humidity=rh,
+        wind_kmh=max(speed, gust) * 3.6,
+        rain_mm=rain_mm,
+    )
 
 
 def fetch_forecast(latitude: float, longitude: float) -> list[ForecastInterval]:
-    """Fetch 5-day / 3-hour forecast and normalise to pure ForecastInterval objects."""
-    if not settings.OPENWEATHER_API_KEY:
-        raise UpstreamUnavailableError("Weather service API key is not configured.")
+    """The first run of at least 8 valid intervals on a 3-hour cadence.
 
-    url = "https://api.openweathermap.org/data/2.5/forecast"
-    params = {
-        "lat": latitude,
-        "lon": longitude,
-        "units": "metric",
-        "appid": settings.OPENWEATHER_API_KEY,
-    }
+    Bad entries are skipped, never filled with zeros, so missing data can't look like frost.
+    """
+    data = _get_json(
+        "https://api.openweathermap.org/data/2.5/forecast",
+        {"lat": latitude, "lon": longitude, "units": "metric"},
+    )
+    entries = data.get("list") if isinstance(data, dict) else None
+    if not isinstance(entries, list):
+        raise UpstreamUnavailableError("Forecast returned an unexpected response.")
 
-    try:
-        with httpx.Client(timeout=5.0) as client:
-            resp = client.get(url, params=params)
-            if resp.status_code != 200:
-                raise UpstreamUnavailableError(
-                    f"Weather forecast provider returned status {resp.status_code}"
-                )
-            data = resp.json()
-    except (httpx.RequestError, httpx.TimeoutException) as exc:
-        raise UpstreamUnavailableError("Weather forecast service timed out or failed.") from exc
+    parsed = sorted((p for p in map(_parse_entry, entries) if p is not None), key=lambda p: p[0])
+    run: list[ForecastInterval] = []
+    prev_dt = None
+    for dt, interval in parsed:
+        if prev_dt is not None and dt - prev_dt < CADENCE_SECONDS:
+            continue  # duplicate or off-cadence entry
+        if prev_dt is not None and dt - prev_dt > CADENCE_SECONDS:
+            if len(run) >= MIN_INTERVALS:
+                break
+            run = []  # gap: start a new run
+        run.append(interval)
+        prev_dt = dt
 
-    entries = data.get("list", [])
-    if not entries:
-        raise InsufficientForecast("Weather provider returned empty forecast intervals.")
-
-    intervals: list[ForecastInterval] = []
-    for entry in entries:
-        dt = entry.get("dt")
-        if dt:
-            ts = datetime.datetime.fromtimestamp(dt, datetime.UTC).isoformat()
-        else:
-            ts = entry.get("dt_txt", "")
-
-        main = entry.get("main", {})
-        temp = float(main.get("temp", 0.0))
-        rh = float(main.get("humidity", 0.0))
-
-        wind_data = entry.get("wind", {})
-        speed = float(wind_data.get("speed", 0.0))
-        gust = float(wind_data.get("gust", speed))
-        wind_kmh = max(speed, gust) * 3.6
-
-        rain_data = entry.get("rain", {})
-        rain_mm = float(rain_data.get("3h", 0.0)) if isinstance(rain_data, dict) else 0.0
-
-        intervals.append(
-            ForecastInterval(
-                timestamp=ts,
-                temperature_c=temp,
-                relative_humidity=rh,
-                wind_kmh=wind_kmh,
-                rain_mm=rain_mm,
-            )
+    if len(run) < MIN_INTERVALS:
+        raise InsufficientForecast(
+            f"Only {len(run)} consecutive valid 3-hour intervals, need {MIN_INTERVALS}."
         )
-
-    return intervals
+    return run

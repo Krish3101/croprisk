@@ -1,18 +1,16 @@
 """Lookup routes: crops catalogue and geocoding."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 
-from app.deps import get_current_user
-from app.domain.crops import CROPS
-from app.models import User
 from app.schemas import CropSummary, GeocodeCandidate, StageSummary
+from app.services.catalogue_loader import CROPS
 from app.services.weather import geocode
 
 router = APIRouter(tags=["lookup"])
 
 
 @router.get("/crops", response_model=list[CropSummary])
-def get_crops(_current_user: User = Depends(get_current_user)) -> list[CropSummary]:
+def get_crops() -> list[CropSummary]:
     result: list[CropSummary] = []
     for crop in CROPS.values():
         sorted_stages = sorted(crop.stages.values(), key=lambda s: s.order)
@@ -40,8 +38,7 @@ def get_crops(_current_user: User = Depends(get_current_user)) -> list[CropSumma
 
 @router.get("/geocode", response_model=list[GeocodeCandidate])
 def geocode_location(
-    q: str = Query(default=""),
-    _current_user: User = Depends(get_current_user),
+    q: str = Query(..., min_length=2, max_length=100),
 ) -> list[GeocodeCandidate]:
     candidates = geocode(q)
     return [GeocodeCandidate(**c) for c in candidates]
