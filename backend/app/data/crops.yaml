@@ -1,0 +1,512 @@
+# Indicative thresholds for a prototype; not yet checked against published sources.
+
+crops:
+  wheat:
+    id: "wheat"
+    common_name: "Wheat"
+    scientific_name: "Triticum aestivum"
+    source: "unsourced"
+    rh_crit: 80.0
+    t_min_dis: 15.0
+    t_max_dis: 25.0
+    stages:
+      wheat.emergence:
+        id: "wheat.emergence"
+        name: "Emergence / Seedling"
+        bbch: "00–19"
+        order: 1
+        t_crit_heat: 32.0
+        t_lethal_heat: 38.0
+        t_crit_frost: -2.0
+        t_lethal_frost: -6.0
+        r_crit_24h: 45.0
+        r_flood_24h: 90.0
+        w_crit_lodge: 50.0
+        w_severe: 80.0
+        weights: [0.15, 0.25, 0.35, 0.20, 0.05]
+        source: "unsourced"
+      wheat.tillering:
+        id: "wheat.tillering"
+        name: "Tillering / Jointing"
+        bbch: "20–39"
+        order: 2
+        t_crit_heat: 30.0
+        t_lethal_heat: 36.0
+        t_crit_frost: -3.0
+        t_lethal_frost: -8.0
+        r_crit_24h: 50.0
+        r_flood_24h: 100.0
+        w_crit_lodge: 45.0
+        w_severe: 75.0
+        weights: [0.10, 0.20, 0.30, 0.30, 0.10]
+        source: "unsourced"
+      wheat.anthesis:
+        id: "wheat.anthesis"
+        name: "Flowering / Anthesis"
+        bbch: "61–69"
+        order: 3
+        t_crit_heat: 27.0
+        t_lethal_heat: 34.0
+        t_crit_frost: 1.0
+        t_lethal_frost: -2.0
+        r_crit_24h: 35.0
+        r_flood_24h: 75.0
+        w_crit_lodge: 40.0
+        w_severe: 65.0
+        weights: [0.35, 0.30, 0.15, 0.15, 0.05]
+        source: "unsourced"
+      wheat.grain_fill:
+        id: "wheat.grain_fill"
+        name: "Grain Filling"
+        bbch: "71–85"
+        order: 4
+        t_crit_heat: 28.0
+        t_lethal_heat: 35.0
+        t_crit_frost: 0.0
+        t_lethal_frost: -3.0
+        r_crit_24h: 40.0
+        r_flood_24h: 80.0
+        w_crit_lodge: 35.0
+        w_severe: 55.0
+        weights: [0.30, 0.10, 0.20, 0.15, 0.25]
+        source: "unsourced"
+      wheat.ripening:
+        id: "wheat.ripening"
+        name: "Ripening / Harvest"
+        bbch: "87–92"
+        order: 5
+        t_crit_heat: 35.0
+        t_lethal_heat: 42.0
+        t_crit_frost: 0.0
+        t_lethal_frost: -4.0
+        r_crit_24h: 25.0
+        r_flood_24h: 50.0
+        w_crit_lodge: 30.0
+        w_severe: 50.0
+        weights: [0.10, 0.05, 0.35, 0.15, 0.35]
+        source: "unsourced"
+
+  rice:
+    id: "rice"
+    common_name: "Rice / Paddy"
+    scientific_name: "Oryza sativa"
+    source: "unsourced"
+    rh_crit: 85.0
+    t_min_dis: 22.0
+    t_max_dis: 32.0
+    stages:
+      rice.seedling:
+        id: "rice.seedling"
+        name: "Seedling / Nursery"
+        bbch: "00–19"
+        order: 1
+        t_crit_heat: 36.0
+        t_lethal_heat: 42.0
+        t_crit_frost: 12.0
+        t_lethal_frost: 5.0
+        r_crit_24h: 80.0
+        r_flood_24h: 160.0
+        w_crit_lodge: 50.0
+        w_severe: 80.0
+        weights: [0.20, 0.35, 0.20, 0.20, 0.05]
+        source: "unsourced"
+      rice.tillering:
+        id: "rice.tillering"
+        name: "Tillering / Vegetative"
+        bbch: "20–39"
+        order: 2
+        t_crit_heat: 37.0
+        t_lethal_heat: 43.0
+        t_crit_frost: 10.0
+        t_lethal_frost: 4.0
+        r_crit_24h: 120.0
+        r_flood_24h: 220.0
+        w_crit_lodge: 45.0
+        w_severe: 75.0
+        weights: [0.15, 0.20, 0.15, 0.35, 0.15]
+        source: "unsourced"
+      rice.panicle:
+        id: "rice.panicle"
+        name: "Panicle Initiation / Anthesis"
+        bbch: "51–69"
+        order: 3
+        t_crit_heat: 34.0
+        t_lethal_heat: 39.0
+        t_crit_frost: 15.0
+        t_lethal_frost: 8.0
+        r_crit_24h: 70.0
+        r_flood_24h: 140.0
+        w_crit_lodge: 40.0
+        w_severe: 65.0
+        weights: [0.40, 0.25, 0.10, 0.15, 0.10]
+        source: "unsourced"
+      rice.milk:
+        id: "rice.milk"
+        name: "Milk / Dough"
+        bbch: "71–85"
+        order: 4
+        t_crit_heat: 35.0
+        t_lethal_heat: 40.0
+        t_crit_frost: 12.0
+        t_lethal_frost: 6.0
+        r_crit_24h: 80.0
+        r_flood_24h: 150.0
+        w_crit_lodge: 35.0
+        w_severe: 60.0
+        weights: [0.25, 0.15, 0.20, 0.15, 0.25]
+        source: "unsourced"
+      rice.maturity:
+        id: "rice.maturity"
+        name: "Maturity / Harvest"
+        bbch: "87–92"
+        order: 5
+        t_crit_heat: 38.0
+        t_lethal_heat: 44.0
+        t_crit_frost: 10.0
+        t_lethal_frost: 4.0
+        r_crit_24h: 40.0
+        r_flood_24h: 80.0
+        w_crit_lodge: 30.0
+        w_severe: 50.0
+        weights: [0.05, 0.05, 0.40, 0.15, 0.35]
+        source: "unsourced"
+
+  cotton:
+    id: "cotton"
+    common_name: "Cotton"
+    scientific_name: "Gossypium hirsutum"
+    source: "unsourced"
+    rh_crit: 80.0
+    t_min_dis: 20.0
+    t_max_dis: 30.0
+    stages:
+      cotton.emergence:
+        id: "cotton.emergence"
+        name: "Emergence / Seedling"
+        bbch: "00–19"
+        order: 1
+        t_crit_heat: 38.0
+        t_lethal_heat: 45.0
+        t_crit_frost: 8.0
+        t_lethal_frost: 2.0
+        r_crit_24h: 40.0
+        r_flood_24h: 80.0
+        w_crit_lodge: 45.0
+        w_severe: 75.0
+        weights: [0.15, 0.30, 0.35, 0.15, 0.05]
+        source: "unsourced"
+      cotton.squaring:
+        id: "cotton.squaring"
+        name: "Squaring (Budding)"
+        bbch: "51–59"
+        order: 2
+        t_crit_heat: 38.0
+        t_lethal_heat: 44.0
+        t_crit_frost: 6.0
+        t_lethal_frost: 1.0
+        r_crit_24h: 50.0
+        r_flood_24h: 100.0
+        w_crit_lodge: 45.0
+        w_severe: 75.0
+        weights: [0.25, 0.15, 0.25, 0.25, 0.10]
+        source: "unsourced"
+      cotton.flowering:
+        id: "cotton.flowering"
+        name: "Peak Flowering"
+        bbch: "60–69"
+        order: 3
+        t_crit_heat: 36.0
+        t_lethal_heat: 42.0
+        t_crit_frost: 8.0
+        t_lethal_frost: 2.0
+        r_crit_24h: 45.0
+        r_flood_24h: 90.0
+        w_crit_lodge: 40.0
+        w_severe: 65.0
+        weights: [0.40, 0.15, 0.20, 0.15, 0.10]
+        source: "unsourced"
+      cotton.boll_open:
+        id: "cotton.boll_open"
+        name: "Boll Opening"
+        bbch: "71–85"
+        order: 4
+        t_crit_heat: 39.0
+        t_lethal_heat: 46.0
+        t_crit_frost: 5.0
+        t_lethal_frost: 0.0
+        r_crit_24h: 30.0
+        r_flood_24h: 60.0
+        w_crit_lodge: 35.0
+        w_severe: 60.0
+        weights: [0.15, 0.10, 0.35, 0.25, 0.15]
+        source: "unsourced"
+      cotton.harvest:
+        id: "cotton.harvest"
+        name: "Harvest / Picking"
+        bbch: "87–92"
+        order: 5
+        t_crit_heat: 40.0
+        t_lethal_heat: 48.0
+        t_crit_frost: 4.0
+        t_lethal_frost: 0.0
+        r_crit_24h: 20.0
+        r_flood_24h: 40.0
+        w_crit_lodge: 30.0
+        w_severe: 50.0
+        weights: [0.05, 0.05, 0.50, 0.15, 0.25]
+        source: "unsourced"
+
+  soybean:
+    id: "soybean"
+    common_name: "Soybean"
+    scientific_name: "Glycine max"
+    source: "unsourced"
+    rh_crit: 82.0
+    t_min_dis: 20.0
+    t_max_dis: 28.0
+    stages:
+      soybean.emergence:
+        id: "soybean.emergence"
+        name: "Emergence / Unifoliate"
+        bbch: "00–19"
+        order: 1
+        t_crit_heat: 35.0
+        t_lethal_heat: 42.0
+        t_crit_frost: 4.0
+        t_lethal_frost: -1.0
+        r_crit_24h: 45.0
+        r_flood_24h: 90.0
+        w_crit_lodge: 45.0
+        w_severe: 75.0
+        weights: [0.15, 0.30, 0.35, 0.15, 0.05]
+        source: "unsourced"
+      soybean.vegetative:
+        id: "soybean.vegetative"
+        name: "Vegetative Canopy"
+        bbch: "20–49"
+        order: 2
+        t_crit_heat: 36.0
+        t_lethal_heat: 43.0
+        t_crit_frost: 2.0
+        t_lethal_frost: -2.0
+        r_crit_24h: 55.0
+        r_flood_24h: 110.0
+        w_crit_lodge: 45.0
+        w_severe: 75.0
+        weights: [0.15, 0.15, 0.25, 0.35, 0.10]
+        source: "unsourced"
+      soybean.flowering:
+        id: "soybean.flowering"
+        name: "Flowering / Anthesis"
+        bbch: "60–69"
+        order: 3
+        t_crit_heat: 32.0
+        t_lethal_heat: 38.0
+        t_crit_frost: 5.0
+        t_lethal_frost: 0.0
+        r_crit_24h: 45.0
+        r_flood_24h: 90.0
+        w_crit_lodge: 40.0
+        w_severe: 65.0
+        weights: [0.35, 0.20, 0.20, 0.20, 0.05]
+        source: "unsourced"
+      soybean.pod_dev:
+        id: "soybean.pod_dev"
+        name: "Pod Development"
+        bbch: "71–79"
+        order: 4
+        t_crit_heat: 34.0
+        t_lethal_heat: 40.0
+        t_crit_frost: 3.0
+        t_lethal_frost: -1.0
+        r_crit_24h: 45.0
+        r_flood_24h: 90.0
+        w_crit_lodge: 35.0
+        w_severe: 60.0
+        weights: [0.25, 0.15, 0.25, 0.20, 0.15]
+        source: "unsourced"
+      soybean.maturity:
+        id: "soybean.maturity"
+        name: "Maturity / Harvest"
+        bbch: "89–92"
+        order: 5
+        t_crit_heat: 37.0
+        t_lethal_heat: 44.0
+        t_crit_frost: 2.0
+        t_lethal_frost: -2.0
+        r_crit_24h: 25.0
+        r_flood_24h: 50.0
+        w_crit_lodge: 30.0
+        w_severe: 50.0
+        weights: [0.05, 0.05, 0.45, 0.15, 0.30]
+        source: "unsourced"
+
+  maize:
+    id: "maize"
+    common_name: "Maize"
+    scientific_name: "Zea mays"
+    source: "unsourced"
+    rh_crit: 85.0
+    t_min_dis: 18.0
+    t_max_dis: 28.0
+    stages:
+      maize.emergence:
+        id: "maize.emergence"
+        name: "Seedling / Emergence"
+        bbch: "00–19"
+        order: 1
+        t_crit_heat: 36.0
+        t_lethal_heat: 43.0
+        t_crit_frost: 4.0
+        t_lethal_frost: -1.0
+        r_crit_24h: 50.0
+        r_flood_24h: 100.0
+        w_crit_lodge: 45.0
+        w_severe: 75.0
+        weights: [0.15, 0.30, 0.35, 0.15, 0.05]
+        source: "unsourced"
+      maize.whorl:
+        id: "maize.whorl"
+        name: "Whorl / Knee High"
+        bbch: "20–39"
+        order: 2
+        t_crit_heat: 37.0
+        t_lethal_heat: 44.0
+        t_crit_frost: 2.0
+        t_lethal_frost: -2.0
+        r_crit_24h: 65.0
+        r_flood_24h: 130.0
+        w_crit_lodge: 45.0
+        w_severe: 75.0
+        weights: [0.15, 0.15, 0.30, 0.25, 0.15]
+        source: "unsourced"
+      maize.silking:
+        id: "maize.silking"
+        name: "Tasseling / Silking"
+        bbch: "61–69"
+        order: 3
+        t_crit_heat: 34.0
+        t_lethal_heat: 39.0
+        t_crit_frost: 5.0
+        t_lethal_frost: 0.0
+        r_crit_24h: 50.0
+        r_flood_24h: 100.0
+        w_crit_lodge: 35.0
+        w_severe: 60.0
+        weights: [0.40, 0.20, 0.15, 0.10, 0.15]
+        source: "unsourced"
+      maize.grain_fill:
+        id: "maize.grain_fill"
+        name: "Grain Fill (Milk/Dent)"
+        bbch: "71–85"
+        order: 4
+        t_crit_heat: 35.0
+        t_lethal_heat: 41.0
+        t_crit_frost: 3.0
+        t_lethal_frost: -2.0
+        r_crit_24h: 55.0
+        r_flood_24h: 110.0
+        w_crit_lodge: 35.0
+        w_severe: 55.0
+        weights: [0.25, 0.10, 0.20, 0.15, 0.30]
+        source: "unsourced"
+      maize.maturity:
+        id: "maize.maturity"
+        name: "Maturity / Harvest"
+        bbch: "87–92"
+        order: 5
+        t_crit_heat: 38.0
+        t_lethal_heat: 45.0
+        t_crit_frost: 1.0
+        t_lethal_frost: -3.0
+        r_crit_24h: 30.0
+        r_flood_24h: 60.0
+        w_crit_lodge: 30.0
+        w_severe: 50.0
+        weights: [0.05, 0.05, 0.40, 0.15, 0.35]
+        source: "unsourced"
+
+  mustard:
+    id: "mustard"
+    common_name: "Mustard"
+    scientific_name: "Brassica juncea"
+    source: "unsourced"
+    rh_crit: 80.0
+    t_min_dis: 12.0
+    t_max_dis: 22.0
+    stages:
+      mustard.emergence:
+        id: "mustard.emergence"
+        name: "Seedling / Emergence"
+        bbch: "00–19"
+        order: 1
+        t_crit_heat: 32.0
+        t_lethal_heat: 38.0
+        t_crit_frost: 1.0
+        t_lethal_frost: -4.0
+        r_crit_24h: 40.0
+        r_flood_24h: 80.0
+        w_crit_lodge: 45.0
+        w_severe: 75.0
+        weights: [0.15, 0.30, 0.35, 0.15, 0.05]
+        source: "unsourced"
+      mustard.rosette:
+        id: "mustard.rosette"
+        name: "Rosette / Branching"
+        bbch: "20–39"
+        order: 2
+        t_crit_heat: 30.0
+        t_lethal_heat: 36.0
+        t_crit_frost: 0.0
+        t_lethal_frost: -5.0
+        r_crit_24h: 45.0
+        r_flood_24h: 90.0
+        w_crit_lodge: 40.0
+        w_severe: 70.0
+        weights: [0.10, 0.25, 0.25, 0.30, 0.10]
+        source: "unsourced"
+      mustard.flowering:
+        id: "mustard.flowering"
+        name: "Flowering / Anthesis"
+        bbch: "60–69"
+        order: 3
+        t_crit_heat: 27.0
+        t_lethal_heat: 33.0
+        t_crit_frost: 2.0
+        t_lethal_frost: -2.0
+        r_crit_24h: 30.0
+        r_flood_24h: 60.0
+        w_crit_lodge: 35.0
+        w_severe: 60.0
+        weights: [0.30, 0.35, 0.15, 0.15, 0.05]
+        source: "unsourced"
+      mustard.siliqua:
+        id: "mustard.siliqua"
+        name: "Pod Formation (Siliqua)"
+        bbch: "71–85"
+        order: 4
+        t_crit_heat: 28.0
+        t_lethal_heat: 34.0
+        t_crit_frost: 1.0
+        t_lethal_frost: -3.0
+        r_crit_24h: 35.0
+        r_flood_24h: 70.0
+        w_crit_lodge: 30.0
+        w_severe: 55.0
+        weights: [0.30, 0.15, 0.20, 0.15, 0.20]
+        source: "unsourced"
+      mustard.maturity:
+        id: "mustard.maturity"
+        name: "Maturity / Harvest"
+        bbch: "89–92"
+        order: 5
+        t_crit_heat: 34.0
+        t_lethal_heat: 40.0
+        t_crit_frost: 0.0
+        t_lethal_frost: -4.0
+        r_crit_24h: 20.0
+        r_flood_24h: 45.0
+        w_crit_lodge: 25.0
+        w_severe: 45.0
+        weights: [0.05, 0.05, 0.40, 0.15, 0.35]
+        source: "unsourced"
