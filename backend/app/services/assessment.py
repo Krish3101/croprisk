@@ -107,6 +107,14 @@ def _rescore(plot: Plot, row: RiskAssessment, db: Session, advisory_builder) -> 
     return row
 
 
+def preview_score(plot: Plot, row: RiskAssessment) -> AssessmentResult:
+    """Score the stored forecast for the plot's current stage without saving it or building
+    an advisory. For views that show only the score; the risk route re-scores and saves."""
+    intervals = [ForecastInterval(**item) for item in json.loads(row.forecast)]
+    crop, stage = catalogue_entry(plot)
+    return evaluate(intervals, stage, crop)
+
+
 def cached_or_rescore(
     plot: Plot,
     row: RiskAssessment | None,

@@ -20,11 +20,13 @@ from app.schemas import (
     StageRef,
 )
 from app.services.assessment import (
+    CACHE_TTL,
     STALE_SERVE_CAP,
-    cached_or_rescore,
     forecast_age,
     get_plot_risk,
     is_row_relevant,
+    location_key,
+    preview_score,
 )
 from app.services.catalogue_loader import get_crop, get_stage
 
@@ -63,13 +65,24 @@ def _summary(row: RiskAssessment, is_stale: bool) -> LatestRiskSummary:
     )
 
 
-def _latest_risk(plot: Plot, row: RiskAssessment | None, db: Session) -> LatestRiskSummary | None:
+def _latest_risk(plot: Plot, row: RiskAssessment | None) -> LatestRiskSummary | None:
     if row is None or get_stage(plot.crop_id, plot.stage_id) is None:
         return None
     now = datetime.datetime.now(UTC)
-    fresh = cached_or_rescore(plot, row, now, db)
-    if fresh is not None:
-        return _summary(fresh, is_stale=False)
+    same_place = row.location_key == location_key(plot.latitude, plot.longitude)
+    if same_place and forecast_age(row, now) < CACHE_TTL:
+        if is_row_relevant(row, plot):
+            return _summary(row, is_stale=False)
+        # Stage or catalogue changed: score in memory only. The list never shows the advisory,
+        # so the LLM call (and the saved re-score) waits for the risk route.
+        result = preview_score(plot, row)
+        return LatestRiskSummary(
+            score=result.score,
+            severity=result.severity,
+            primary_threat=result.primary_threat,
+            created_at=row.created_at,
+            is_stale=False,
+        )
     # An old forecast for the same place and stage is still worth showing, marked stale,
     # but not past the same 48 h cap the risk route uses.
     if is_row_relevant(row, plot) and forecast_age(row, now) <= STALE_SERVE_CAP:
@@ -77,7 +90,7 @@ def _latest_risk(plot: Plot, row: RiskAssessment | None, db: Session) -> LatestR
     return None
 
 
-def _to_plot_summary(plot: Plot, row: RiskAssessment | None, db: Session) -> PlotSummary:
+def _to_plot_summary(plot: Plot, row: RiskAssessment | None) -> PlotSummary:
     crop = get_crop(plot.crop_id)
     stage = get_stage(plot.crop_id, plot.stage_id)
     return PlotSummary(
@@ -94,14 +107,14 @@ def _to_plot_summary(plot: Plot, row: RiskAssessment | None, db: Session) -> Plo
         longitude=plot.longitude,
         sowing_date=plot.sowing_date.isoformat(),
         days_after_sowing=max(0, (datetime.date.today() - plot.sowing_date).days),
-        latest_risk=_latest_risk(plot, row, db),
+        latest_risk=_latest_risk(plot, row),
     )
 
 
 @router.get("", response_model=list[PlotSummary])
 def list_plots(db: Session = Depends(get_db)) -> list[PlotSummary]:
     # Single user with a handful of fields, so one query per plot is fine here.
-    summaries = [_to_plot_summary(plot, plot.risk_assessment, db) for plot in db.query(Plot)]
+    summaries = [_to_plot_summary(plot, plot.risk_assessment) for plot in db.query(Plot)]
     # Highest risk first, unassessed last, then by name.
     summaries.sort(key=lambda s: (-(s.latest_risk.score if s.latest_risk else -1), s.name))
     return summaries
@@ -115,7 +128,7 @@ def create_plot(req: PlotCreateRequest, db: Session = Depends(get_db)) -> PlotSu
     db.add(plot)
     db.commit()
     db.refresh(plot)
-    return _to_plot_summary(plot, None, db)
+    return _to_plot_summary(plot, None)
 
 
 @router.patch("/{plot_id}", response_model=PlotSummary)
@@ -135,7 +148,7 @@ def update_plot(
         plot.updated_at = datetime.datetime.now(UTC).isoformat()
         db.commit()
         db.refresh(plot)
-    return _to_plot_summary(plot, plot.risk_assessment, db)
+    return _to_plot_summary(plot, plot.risk_assessment)
 
 
 @router.delete("/{plot_id}", status_code=status.HTTP_204_NO_CONTENT)

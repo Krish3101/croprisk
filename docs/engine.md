@@ -6,7 +6,7 @@ This document describes the pure mathematical formulations implemented in `backe
 
 ## 1. Mathematical Formulation
 
-The CropRisk engine consumes normalised 3-hour forecast intervals (up to 40, i.e. 5 days; at least 8) and computes five hazard stress indices $I \in [0, 100]$:
+The CropRisk engine consumes normalised 3-hour forecast intervals (40 cover 5 days; `weather.fetch_forecast` rejects forecasts with fewer than 8, the engine itself does not check) and computes five hazard stress indices $I \in [0, 100]$:
 
 1. **Extreme Heat ($I_{\text{heat}}$):**
    $$\Delta T_{\text{peak}} = \max(0, \max(T) - T_{\text{crit,heat}})$$

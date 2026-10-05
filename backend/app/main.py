@@ -1,4 +1,4 @@
-"""FastAPI main application entrypoint."""
+"""App setup: startup checks, host and routing config, health route."""
 
 import logging
 from contextlib import asynccontextmanager

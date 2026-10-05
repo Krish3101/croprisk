@@ -21,7 +21,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   const [candidates, setCandidates] = useState<GeocodeCandidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(Boolean(value.latitude && value.longitude));
+  const [selected, setSelected] = useState(value.latitude != null && value.longitude != null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -29,7 +29,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
   useEffect(() => {
     setQuery(value.location_name || "");
-    setSelected(Boolean(value.latitude && value.longitude));
+    setSelected(value.latitude != null && value.longitude != null);
   }, [value.location_name, value.latitude, value.longitude]);
 
   useEffect(() => {
@@ -51,23 +51,31 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       return;
     }
 
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setLoading(true);
       setSearchError(null);
       try {
         const results = await api.searchGeocode(query);
+        if (cancelled) return;
         setCandidates(results);
         setOpen(true);
         setActiveIndex(-1);
       } catch {
+        if (cancelled) return;
         setCandidates([]);
         setSearchError("Location search is unavailable right now. Try again in a minute.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, 350);
 
-    return () => clearTimeout(timer);
+    // A reply that lands after the user typed again or picked a result must not reopen the list.
+    return () => {
+      cancelled = true;
+      setLoading(false);
+      clearTimeout(timer);
+    };
   }, [query, selected]);
 
   const handleSelect = (candidate: GeocodeCandidate) => {
@@ -158,7 +166,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         )}
       </div>
 
-      {selected && value.latitude !== null && (
+      {selected && value.latitude != null && (
         <p className="text-xs text-emerald-700 mt-1 font-medium">
           ✓ Coordinates confirmed: ({value.latitude.toFixed(4)}, {value.longitude?.toFixed(4)})
         </p>
