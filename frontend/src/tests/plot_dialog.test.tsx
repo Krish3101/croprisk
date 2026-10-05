@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { PlotDialog } from "../components/PlotDialog";
 import { CropSummary } from "../types";
 
@@ -25,6 +25,8 @@ const mockCrops: CropSummary[] = [
 ];
 
 describe("PlotDialog Component", () => {
+  afterEach(() => cleanup());
+
   it("disables stage select until crop is chosen, then populates corresponding stages", () => {
     render(
       <PlotDialog
@@ -49,5 +51,15 @@ describe("PlotDialog Component", () => {
     expect(screen.getByText(/Seedling/)).toBeInTheDocument();
     expect(screen.getByText(/Tillering/)).toBeInTheDocument();
     expect(screen.queryByText(/Emergence/)).not.toBeInTheDocument();
+  });
+
+  it("focuses the first invalid field after a failed submit", () => {
+    render(<PlotDialog isOpen={true} onClose={vi.fn()} onSave={vi.fn()} crops={mockCrops} />);
+
+    fireEvent.change(screen.getByLabelText(/Field name/), { target: { value: "North" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add Field" }));
+
+    expect(screen.getByTestId("crop-select")).toHaveFocus();
+    expect(screen.getByTestId("crop-select")).toHaveAttribute("aria-invalid", "true");
   });
 });
