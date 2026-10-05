@@ -11,16 +11,19 @@ ENV/
 env/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 .coverage
 .coverage.*
 htmlcov/
 dist/
 build/
 *.egg-info/
+backend/croprisk.egg-info/
 
 # SQLite
 *.db
 *.sqlite3
+*.sqlite
 *.db-shm
 *.db-wal
 *.db-journal
@@ -36,19 +39,38 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.tsbuildinfo
 
-# Environment
+# Environment & Secrets
 .env
+.env.*
 .env*.local
 backend/.env
+backend/.env.*
 backend/.env*.local
 !.env.example
 !backend/.env.example
+*.pem
+*.key
 
-# OS / IDE
+# Logs
+*.log
+logs/
+
+# OS Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
+
+# IDE & Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 *.sublime-project
 *.sublime-workspace
