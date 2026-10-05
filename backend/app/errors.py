@@ -36,39 +36,21 @@ class ValidationError(AppError):
         )
 
 
-class InvalidCredentialsError(AppError):
-    def __init__(self, message: str = "Invalid email or password."):
-        super().__init__(
-            message=message,
-            code="invalid_credentials",
-            status_code=401,
-        )
-
-
-class UnauthorizedError(AppError):
-    def __init__(self, message: str = "Authentication required."):
-        super().__init__(
-            message=message,
-            code="unauthorized",
-            status_code=401,
-        )
-
-
-class EmailTakenError(AppError):
-    def __init__(self, message: str = "An account with this email already exists."):
-        super().__init__(
-            message=message,
-            code="email_taken",
-            status_code=409,
-        )
-
-
 class NotFoundError(AppError):
     def __init__(self, message: str = "Resource not found."):
         super().__init__(
             message=message,
             code="not_found",
             status_code=404,
+        )
+
+
+class CatalogueMismatchError(AppError):
+    def __init__(self, message: str):
+        super().__init__(
+            message=message,
+            code="catalogue_mismatch",
+            status_code=409,
         )
 
 
@@ -104,9 +86,15 @@ def register_error_handlers(app: FastAPI) -> None:
         first_message = "Validation error."
         for err in exc.errors():
             loc = err.get("loc", [])
-            field_name = str(loc[-1]) if loc else "non_field_error"
+            # Handle JSON decode errors where last loc is an int char offset
+            if loc and (isinstance(loc[-1], int) or str(loc[-1]).isdigit()):
+                field_name = "body"
+            elif loc:
+                field_name = str(loc[-1])
+            else:
+                field_name = "non_field_error"
+
             msg = err.get("msg", "Invalid value.")
-            # Clean pydantic message prefix like "Value error, "
             msg = msg.removeprefix("Value error, ")
             fields[field_name] = msg
             if first_message == "Validation error.":
@@ -120,14 +108,13 @@ def register_error_handlers(app: FastAPI) -> None:
         _request: Request, exc: StarletteHTTPException
     ) -> JSONResponse:
         code_map = {
-            401: "unauthorized",
-            403: "unauthorized",
+            400: "bad_request",
             404: "not_found",
-            409: "email_taken",
+            405: "method_not_allowed",
             422: "validation_error",
             503: "upstream_unavailable",
         }
-        code = code_map.get(exc.status_code, "internal_error")
+        code = code_map.get(exc.status_code, "http_error")
         message = exc.detail if isinstance(exc.detail, str) else "An HTTP error occurred."
         content = _format_error_response(code, message)
         return JSONResponse(status_code=exc.status_code, content=content)
