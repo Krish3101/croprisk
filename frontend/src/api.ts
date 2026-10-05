@@ -6,7 +6,6 @@ import {
   PlotRiskResponse,
   PlotSummary,
   PlotUpdateInput,
-  User,
 } from "./types";
 
 export class ApiError extends Error {
@@ -30,7 +29,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   const response = await fetch(path, {
-    credentials: "include",
     ...options,
     headers: {
       ...defaultHeaders,
@@ -66,25 +64,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
-  register: (email: string, password: string) =>
-    request<User>("/api/auth/register", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
-
-  login: (email: string, password: string) =>
-    request<User>("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
-
-  logout: () =>
-    request<void>("/api/auth/logout", {
-      method: "POST",
-    }),
-
-  getMe: () => request<User>("/api/auth/me"),
-
   getCrops: () => request<CropSummary[]>("/api/crops"),
 
   searchGeocode: (q: string) =>
@@ -109,6 +88,11 @@ export const api = {
       method: "DELETE",
     }),
 
-  getPlotRisk: (plotId: number, refresh: boolean = false) =>
-    request<PlotRiskResponse>(`/api/plots/${plotId}/risk${refresh ? "?refresh=true" : ""}`),
+  getPlotRisk: (plotId: number) => request<PlotRiskResponse>(`/api/plots/${plotId}/risk`),
+
+  // Inside the 10-minute cooldown this returns the cached assessment with refreshed: false.
+  refreshPlotRisk: (plotId: number) =>
+    request<PlotRiskResponse>(`/api/plots/${plotId}/risk/refresh`, {
+      method: "POST",
+    }),
 };

@@ -1,38 +1,27 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { PlotCreateInput } from "../types";
 import { PlotCard } from "../components/PlotCard";
 import { PlotDialog } from "../components/PlotDialog";
 
 export const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const { data: currentUser, isError: authError } = useQuery({
-    queryKey: ["authMe"],
-    queryFn: api.getMe,
-    retry: false,
-  });
-
-  React.useEffect(() => {
-    if (authError) {
-      navigate("/login");
-    }
-  }, [authError, navigate]);
-
-  const { data: plots = [], isLoading: plotsLoading, error: plotsError } = useQuery({
+  const {
+    data: plots = [],
+    isLoading: plotsLoading,
+    error: plotsError,
+    refetch: refetchPlots,
+  } = useQuery({
     queryKey: ["plots"],
     queryFn: api.getPlots,
-    enabled: Boolean(currentUser),
   });
 
   const { data: crops = [] } = useQuery({
     queryKey: ["crops"],
     queryFn: api.getCrops,
-    enabled: Boolean(currentUser),
   });
 
   const createMutation = useMutation({
@@ -42,22 +31,16 @@ export const Dashboard: React.FC = () => {
     },
   });
 
-  const handleLogout = async () => {
-    try {
-      await api.logout();
-    } finally {
-      queryClient.clear();
-      navigate("/login");
-    }
-  };
-
   const highRiskCount = plots.filter((p) => p.latest_risk?.severity === "HIGH").length;
   const modRiskCount = plots.filter((p) => p.latest_risk?.severity === "MODERATE").length;
   const lowRiskCount = plots.filter((p) => p.latest_risk?.severity === "LOW").length;
 
   if (plotsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-stone-500 text-sm">
+      <div
+        role="status"
+        className="min-h-screen bg-stone-100 flex items-center justify-center text-stone-600 text-sm"
+      >
         Loading grower dashboard...
       </div>
     );
@@ -67,22 +50,13 @@ export const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-stone-100 pb-12">
       <header className="bg-white border-b border-stone-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="text-xl font-black text-emerald-800 tracking-tight">
               CropRisk
             </span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <span className="text-xs sm:text-sm text-stone-600 font-medium">
-              {currentUser?.email}
+            <span className="hidden md:inline-block text-xs text-stone-500 font-medium border-l border-stone-200 pl-3">
+              Crop &amp; growth-stage aware weather risk engine
             </span>
-            <button
-              onClick={handleLogout}
-              className="text-xs font-semibold px-3 py-1.5 rounded border border-stone-300 text-stone-700 hover:bg-stone-50 transition"
-            >
-              Sign Out
-            </button>
           </div>
         </div>
       </header>
@@ -90,23 +64,24 @@ export const Dashboard: React.FC = () => {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-black text-stone-900">Your fields</h1>
-            <p className="text-xs text-stone-500">
-              Weather risk for the next five days, most urgent first
+            <h1 className="text-2xl font-black text-stone-900">Your fields</h1>
+            <p className="text-sm text-stone-600 mt-1 max-w-2xl">
+              Same weather, different risk: heat, frost, rain, fungal and wind hazards scored per
+              crop and growth stage. Next five days, most urgent first.
             </p>
           </div>
 
           <button
             onClick={() => setIsDialogOpen(true)}
-            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow-sm transition"
+            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold rounded-lg shadow-sm transition"
           >
-            + Register Field
+            + Add field
           </button>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white p-4 rounded-lg border border-stone-200 shadow-sm">
-            <span className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+            <span className="text-xs font-semibold text-stone-600 uppercase tracking-wide">
               Total Fields
             </span>
             <p className="text-2xl font-black text-stone-900 mt-1 tabular-nums">
@@ -115,7 +90,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="bg-white p-4 rounded-lg border border-stone-200 shadow-sm">
             <span className="text-xs font-semibold text-rose-700 uppercase tracking-wide flex items-center gap-1">
-              <span>⚠</span> High Risk
+              <span aria-hidden="true">⚠</span> High Risk
             </span>
             <p className="text-2xl font-black text-rose-700 mt-1 tabular-nums">
               {highRiskCount}
@@ -123,7 +98,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="bg-white p-4 rounded-lg border border-stone-200 shadow-sm">
             <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide flex items-center gap-1">
-              <span>▲</span> Moderate Risk
+              <span aria-hidden="true">▲</span> Moderate Risk
             </span>
             <p className="text-2xl font-black text-amber-700 mt-1 tabular-nums">
               {modRiskCount}
@@ -131,7 +106,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="bg-white p-4 rounded-lg border border-stone-200 shadow-sm">
             <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wide flex items-center gap-1">
-              <span>✓</span> Low Risk
+              <span aria-hidden="true">✓</span> Low Risk
             </span>
             <p className="text-2xl font-black text-emerald-700 mt-1 tabular-nums">
               {lowRiskCount}
@@ -140,19 +115,28 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {plotsError ? (
-          <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800">
-            Failed to load fields. Please refresh the page.
+          <div
+            role="alert"
+            className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-800 flex items-center justify-between"
+          >
+            <span>Failed to load fields. Please check your connection and retry.</span>
+            <button
+              onClick={() => refetchPlots()}
+              className="px-3 py-1 bg-white border border-rose-300 text-rose-800 rounded font-semibold text-xs hover:bg-rose-100 transition"
+            >
+              Retry
+            </button>
           </div>
         ) : plots.length === 0 ? (
           <div className="bg-white rounded-xl border border-stone-200 p-12 text-center shadow-sm space-y-3">
-            <h2 className="text-base font-bold text-stone-800">No fields registered yet</h2>
-            <p className="text-xs text-stone-500 max-w-md mx-auto leading-relaxed">
-              Add a plot with its crop, growth stage and location. The forecast for that
-              location is then scored against thresholds for that crop at that stage.
+            <h2 className="text-lg font-bold text-stone-900">No fields registered yet</h2>
+            <p className="text-sm text-stone-600 max-w-md mx-auto leading-relaxed">
+              Add a field with its crop, growth stage and location. The 5-day forecast for that
+              location is evaluated against physiological thresholds for that exact growth stage.
             </p>
             <button
               onClick={() => setIsDialogOpen(true)}
-              className="mt-2 inline-flex items-center px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-md shadow-sm transition"
+              className="mt-2 inline-flex items-center px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold rounded-md shadow-sm transition"
             >
               Add Your First Field
             </button>
