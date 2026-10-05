@@ -2,12 +2,41 @@
 
 import math
 from dataclasses import dataclass
+from enum import StrEnum
 
-from app.domain.crops import CropConfig, StageConfig, get_crop
+from app.domain.catalogue import CropConfig, StageConfig
+
+INTERVAL_HOURS: int = 3
+INTERVALS_PER_24H: int = 8  # 24 hours / 3 hours per interval
+DEGREE_HOURS_SCALE: float = 36.0  # Normalisation base for cumulative degree-hours above critical
+HEAT_PEAK_WEIGHT: float = 70.0  # Weight given to peak temperature delta
+HEAT_DURATION_WEIGHT: float = 30.0  # Weight given to accumulated degree-hours
+DISEASE_MIN_RUN_HOURS: int = 12  # Minimum consecutive hours within disease envelope to trigger risk
+DISEASE_RAMP_HOURS: float = 24.0  # Additional hours above threshold to reach maximum scaling
+DISEASE_BASE_SCORE: float = 30.0  # Base disease score once minimum run is crossed
+DISEASE_SCALE: float = 70.0  # Scaling multiplier for disease duration ramp
+
+SEVERITY_LOW_MAX: int = 29
+SEVERITY_MODERATE_MAX: int = 65
+
+
+class Threat(StrEnum):
+    NONE = "None"
+    FROST = "Frost Damage"
+    HEAT = "Extreme Heat"
+    PRECIP = "Excess Precipitation"
+    WIND = "Wind Lodging"
+    DISEASE = "Fungal Disease Pressure"
+
+
+class Severity(StrEnum):
+    LOW = "LOW"
+    MODERATE = "MODERATE"
+    HIGH = "HIGH"
 
 
 class InsufficientForecast(Exception):
-    """Raised when the forecast interval list is empty."""
+    """Raised when the forecast interval list is empty or insufficient."""
 
 
 @dataclass(frozen=True)
@@ -42,7 +71,7 @@ def _clamp01(x: float) -> float:
 
 
 def _round_half_up(n: float) -> int:
-    return math.floor(n + 0.5)
+    return math.floor(round(n, 9) + 0.5)
 
 
 def _compute_longest_run_hours(
@@ -63,7 +92,7 @@ def _compute_longest_run_hours(
             longest_run = max(longest_run, current_run)
         else:
             current_run = 0
-    return longest_run * 3
+    return longest_run * INTERVAL_HOURS
 
 
 def compute_digest(
@@ -95,7 +124,7 @@ def compute_digest(
 def evaluate(
     intervals: list[ForecastInterval],
     stage: StageConfig,
-    crop: CropConfig | None = None,
+    crop: CropConfig,
 ) -> AssessmentResult:
     """Evaluate crop risk against normalised weather intervals.
 
@@ -104,18 +133,12 @@ def evaluate(
     if not intervals:
         raise InsufficientForecast("Forecast intervals cannot be empty.")
 
-    crop_id = stage.id.split(".")[0]
-    if crop is None:
-        crop = get_crop(crop_id)
-        if crop is None:
-            raise ValueError(f"Unknown crop for stage {stage.id}")
-
     # 1. Heat
     delta_t_peak = max(0.0, max(i.temperature_c - stage.t_crit_heat for i in intervals))
-    dh = sum(max(0.0, i.temperature_c - stage.t_crit_heat) * 3 for i in intervals)
+    dh = sum(max(0.0, i.temperature_c - stage.t_crit_heat) * INTERVAL_HOURS for i in intervals)
     i_heat = (
-        _clamp01(delta_t_peak / (stage.t_lethal_heat - stage.t_crit_heat)) * 70.0
-        + _clamp01(dh / 36.0) * 30.0
+        _clamp01(delta_t_peak / (stage.t_lethal_heat - stage.t_crit_heat)) * HEAT_PEAK_WEIGHT
+        + _clamp01(dh / DEGREE_HOURS_SCALE) * HEAT_DURATION_WEIGHT
     )
 
     # 2. Frost
@@ -124,19 +147,30 @@ def evaluate(
         _clamp01((stage.t_crit_frost - min_t) / (stage.t_crit_frost - stage.t_lethal_frost)) * 100.0
     )
 
-    # 3. Excess precipitation
+    # 3. Excess precipitation (rolling 24-hour window)
     rain_values = [i.rain_mm for i in intervals]
-    if len(rain_values) < 8:
+    if len(rain_values) < INTERVALS_PER_24H:
         r24_max = sum(rain_values)
     else:
-        r24_max = max(sum(rain_values[k : k + 8]) for k in range(len(rain_values) - 7))
+        r24_max = max(
+            sum(rain_values[k : k + INTERVALS_PER_24H])
+            for k in range(len(rain_values) - (INTERVALS_PER_24H - 1))
+        )
     i_precip = (
         _clamp01((r24_max - stage.r_crit_24h) / (stage.r_flood_24h - stage.r_crit_24h)) * 100.0
     )
 
-    # 4. Fungal disease
+    # 4. Fungal disease (consecutive run hours within microclimate envelope)
     l_hours = _compute_longest_run_hours(intervals, crop.rh_crit, crop.t_min_dis, crop.t_max_dis)
-    i_disease = 0.0 if l_hours < 12 else min(100.0, 30.0 + ((l_hours - 12) / 24.0) * 70.0)
+    i_disease = (
+        0.0
+        if l_hours < DISEASE_MIN_RUN_HOURS
+        else min(
+            100.0,
+            DISEASE_BASE_SCORE
+            + ((l_hours - DISEASE_MIN_RUN_HOURS) / DISEASE_RAMP_HOURS) * DISEASE_SCALE,
+        )
+    )
 
     # 5. Wind lodging
     max_w = max(i.wind_kmh for i in intervals)
@@ -157,25 +191,24 @@ def evaluate(
 
     score = _round_half_up(min(100.0, max(s_wsum, r_dom)))
 
-    if score <= 29:
-        severity = "LOW"
-    elif score <= 65:
-        severity = "MODERATE"
+    if score <= SEVERITY_LOW_MAX:
+        severity = Severity.LOW.value
+    elif score <= SEVERITY_MODERATE_MAX:
+        severity = Severity.MODERATE.value
     else:
-        severity = "HIGH"
+        severity = Severity.HIGH.value
 
     # Biological tie-break order: Frost (5) > Heat (4) > Precip (3) > Wind (2) > Disease (1)
     if max_c == 0.0:
-        primary_threat = "None"
+        primary_threat = Threat.NONE.value
     else:
         candidates = [
-            (c_frost, 5, "Frost Damage"),
-            (c_heat, 4, "Extreme Heat"),
-            (c_precip, 3, "Excess Precipitation"),
-            (c_wind, 2, "Wind Lodging"),
-            (c_disease, 1, "Fungal Disease Pressure"),
+            (c_frost, 5, Threat.FROST.value),
+            (c_heat, 4, Threat.HEAT.value),
+            (c_precip, 3, Threat.PRECIP.value),
+            (c_wind, 2, Threat.WIND.value),
+            (c_disease, 1, Threat.DISEASE.value),
         ]
-        # max by value, then biological tie-break priority
         _, _, primary_threat = max(candidates, key=lambda item: (item[0], item[1]))
 
     return AssessmentResult(

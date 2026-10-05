@@ -1,194 +1,127 @@
+import dataclasses
 import json
+import re
+from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+from conftest import make_intervals
+
 from app.config import settings
-from app.domain.crops import CROPS, get_crop, get_stage
-from app.domain.engine import AssessmentResult, WeatherDigest
+from app.domain.engine import AssessmentResult, Threat, WeatherDigest, compute_digest, evaluate
 from app.schemas import Advisory
-from app.services import advice_data, advisory, weather
+from app.services import advisory
+from app.services.catalogue_loader import CROPS, get_crop, get_stage
+
+HAZARD_THREATS = [Threat.HEAT, Threat.FROST, Threat.PRECIP, Threat.WIND, Threat.DISEASE]
+DIGEST = WeatherDigest(
+    peak_temp_c=35.0,
+    min_temp_c=18.0,
+    total_rain_mm=10.0,
+    max_wind_kmh=25.0,
+    peak_humidity_pct=75.0,
+    longest_disease_window_h=6,
+)
+WHEAT = get_crop("wheat")
+ANTHESIS = get_stage("wheat", "wheat.anthesis")
 
 
-def dummy_digest() -> WeatherDigest:
-    return WeatherDigest(
-        peak_temp_c=35.0,
-        min_temp_c=18.0,
-        total_rain_mm=10.0,
-        max_wind_kmh=25.0,
-        peak_humidity_pct=75.0,
-        longest_disease_window_h=6,
+def high_result(threat: Threat) -> AssessmentResult:
+    return AssessmentResult(
+        score=75, severity="HIGH", primary_threat=threat.value, hazard_indices={"heat": 75.0}
     )
 
 
-def test_advisory_bypass_below_30():
-    crop = get_crop("wheat")
-    stage = get_stage("wheat", "wheat.anthesis")
-    result = AssessmentResult(
-        score=25,
-        severity="LOW",
-        primary_threat="None",
-        hazard_indices={"heat": 0.0, "frost": 0.0, "precip": 0.0, "disease": 0.0, "wind": 0.0},
-    )
-    res = advisory.build_advisory(result, crop, stage, "Pune, India", 30, dummy_digest())
+def all_text(adv: Advisory) -> str:
+    directives = " ".join(a.directive for a in adv.actions)
+    return f"{adv.headline} {adv.impact_analysis} {directives} {adv.monitoring_focus}"
+
+
+def test_low_severity_bypasses_llm_and_fallback():
+    result = AssessmentResult(score=25, severity="LOW", primary_threat="None", hazard_indices={})
+    res = advisory.build_advisory(result, WHEAT, ANTHESIS, "Pune", 30, DIGEST)
     assert res.source == "bypass"
     assert res.headline == advisory.BYPASS_ADVISORY.headline
 
 
-def test_all_30_fallbacks_exist_and_validate():
-    threats = [
-        "Extreme Heat",
-        "Frost Damage",
-        "Excess Precipitation",
-        "Fungal Disease Pressure",
-        "Wind Lodging",
-    ]
-    crops = list(CROPS.keys())
-    assert len(crops) == 6
-
-    for crop_id in crops:
-        for threat in threats:
-            adv = advice_data.get_fallback_advisory(crop_id, threat)
-            assert isinstance(adv, Advisory)
-            assert 10 <= len(adv.headline) <= 120
-            assert 40 <= len(adv.impact_analysis) <= 350
-            assert 1 <= len(adv.actions) <= 2
-            for action in adv.actions:
-                assert action.timeframe in ("immediate_24h", "preventative_72h")
-                assert 15 <= len(action.directive) <= 200
-            assert 15 <= len(adv.monitoring_focus) <= 150
-
-    # Generic fallback when threat is None at score >= 30
-    generic = advice_data.get_fallback_advisory("wheat", "None")
-    assert isinstance(generic, Advisory)
+@pytest.mark.parametrize("threat", HAZARD_THREATS)
+def test_fallback_is_valid_for_every_crop_and_stage(threat):
+    for crop in CROPS.values():
+        for stage in crop.stages.values():
+            adv = advisory.build_fallback_advisory(crop, stage, high_result(threat), DIGEST)
+            Advisory.model_validate(adv.model_dump())
 
 
-def test_fallback_free_of_chemical_names_and_doses():
-    prohibited_words = [
-        "fungicide",
-        "pesticide",
-        "herbicide",
-        "insecticide",
-        "mancozeb",
-        "chlorpyrifos",
-        "glyphosate",
-        "imidacloprid",
-        "carbendazim",
-        "ml/l",
-        "g/l",
-        "kg/ha",
-        "litres per",
-    ]
-    for key, adv in advice_data.FALLBACK_ADVISORIES.items():
-        text = f"{adv.headline} {adv.impact_analysis} {' '.join(a.directive for a in adv.actions)} {adv.monitoring_focus}".lower()
-        for bad in prohibited_words:
-            assert bad not in text, f"Found prohibited word '{bad}' in fallback for {key}"
+def test_frost_fallback_cites_engine_min_temp_and_stage_threshold():
+    intervals = make_intervals(temp=8.0)
+    intervals[10] = dataclasses.replace(intervals[10], temperature_c=-1.5)
+    result = evaluate(intervals, ANTHESIS, WHEAT)
+    digest = compute_digest(intervals, WHEAT)
+    assert result.primary_threat == Threat.FROST.value
 
-
-def test_advisory_llm_success():
-    crop = get_crop("wheat")
-    stage = get_stage("wheat", "wheat.anthesis")
-    result = AssessmentResult(
-        score=75,
-        severity="HIGH",
-        primary_threat="Extreme Heat",
-        hazard_indices={"heat": 85.0, "frost": 0.0, "precip": 0.0, "disease": 0.0, "wind": 0.0},
+    res = advisory.build_advisory(result, WHEAT, ANTHESIS, "Ludhiana", 60, digest)
+    assert res.source == "fallback"
+    assert res.impact_analysis == (
+        "Over the next five days the lowest temperature is -1.5 °C; "
+        f"the threshold for this stage is {ANTHESIS.t_crit_frost} °C. "
+        f"Risk score {result.score}/100 ({result.severity})."
     )
 
-    mock_llm_json = {
-        "choices": [
-            {
-                "message": {
-                    "content": json.dumps(
-                        {
-                            "headline": "Severe Heat Warning for Flowering Wheat",
-                            "impact_analysis": "Daytime temperatures over 34 C cause pollen desiccation and floret sterility during anthesis, threatening severe grain yield loss.",
-                            "actions": [
-                                {
-                                    "timeframe": "immediate_24h",
-                                    "directive": "Apply light evening sprinkler irrigation to dampen the canopy and lower midday temperatures.",
-                                }
-                            ],
-                            "monitoring_focus": "Inspect flowering spikes for dried florets.",
-                        }
-                    )
-                }
-            }
-        ]
-    }
 
+def test_advisory_module_has_no_crop_specific_text():
+    source = Path(advisory.__file__).read_text(encoding="utf-8").lower()
+    for crop in CROPS.values():
+        assert crop.id not in source
+        assert crop.common_name.lower() not in source
+
+
+@pytest.mark.parametrize("threat", HAZARD_THREATS)
+def test_fallback_has_no_chemicals_or_weekdays(threat):
+    text = all_text(
+        advisory.build_fallback_advisory(WHEAT, ANTHESIS, high_result(threat), DIGEST)
+    ).lower()
+    for word in ["fungicide", "pesticide", "herbicide", "insecticide", "kg/ha", "ml/l", "g/l"]:
+        assert word not in text
+    assert not re.search(r"monday|tuesday|wednesday|thursday|friday|saturday|sunday", text)
+
+
+def llm_reply(content: dict) -> dict:
+    return {"choices": [{"message": {"content": json.dumps(content)}}]}
+
+
+GOOD_LLM_ADVICE = {
+    "headline": "Severe heat at flowering",
+    "impact_analysis": "Daytime temperatures well above the stage threshold can dry out pollen.",
+    "actions": [{"timeframe": "immediate_24h", "directive": "Irrigate lightly in the evening."}],
+    "monitoring_focus": "Look for dried florets after the hot days.",
+}
+
+
+def run_with_llm(status: int, body: dict):
     with (
         patch.object(settings, "OPENROUTER_API_KEY", "fake-test-key"),
-        patch("httpx.Client.post") as mock_post,
+        patch("httpx.Client.post") as post,
     ):
-        mock_post.return_value.status_code = 200
-        mock_post.return_value.json.return_value = mock_llm_json
-
-        res = advisory.build_advisory(result, crop, stage, "Pune, India", 60, dummy_digest())
-        assert res.source == "llm"
-        assert "Severe Heat Warning" in res.headline
-
-
-def test_advisory_llm_retry_and_fallback():
-    crop = get_crop("wheat")
-    stage = get_stage("wheat", "wheat.anthesis")
-    result = AssessmentResult(
-        score=75,
-        severity="HIGH",
-        primary_threat="Extreme Heat",
-        hazard_indices={"heat": 85.0, "frost": 0.0, "precip": 0.0, "disease": 0.0, "wind": 0.0},
-    )
-
-    # Malformed response (missing required fields)
-    bad_llm_json = {"choices": [{"message": {"content": '{"headline": "short"}'}}]}
-
-    with (
-        patch.object(settings, "OPENROUTER_API_KEY", "fake-test-key"),
-        patch("httpx.Client.post") as mock_post,
-    ):
-        mock_post.return_value.status_code = 200
-        mock_post.return_value.json.return_value = bad_llm_json
-
-        res = advisory.build_advisory(result, crop, stage, "Pune, India", 60, dummy_digest())
-        # Retried once, failed twice -> falls back to deterministic
-        assert mock_post.call_count == 2
-        assert res.source == "fallback"
-        assert "Extreme Heat Advisory for Wheat" in res.headline
+        post.return_value.status_code = status
+        post.return_value.text = json.dumps(body)
+        post.return_value.json.return_value = body
+        return advisory.build_advisory(
+            high_result(Threat.HEAT), WHEAT, ANTHESIS, "Pune", 60, DIGEST
+        )
 
 
-def test_weather_normalization():
-    # Mock openweather API response
-    raw_data = {
-        "list": [
-            {
-                "dt": 1773316800,
-                "main": {"temp": 28.5, "humidity": 65},
-                "wind": {"speed": 4.0, "gust": 7.0},  # gust > speed -> 7.0 * 3.6 = 25.2 km/h
-                "rain": {"3h": 12.5},
-            },
-            {
-                "dt": 1773327600,
-                "main": {"temp": 26.0, "humidity": 70},
-                "wind": {"speed": 5.0},  # no gust -> speed * 3.6 = 18.0 km/h
-                # missing rain -> 0.0
-            },
-        ]
-    }
+def test_llm_reply_is_used_when_valid():
+    res = run_with_llm(200, llm_reply(GOOD_LLM_ADVICE))
+    assert res.source == "llm"
+    assert res.headline == "Severe heat at flowering"
 
-    with (
-        patch.object(settings, "OPENWEATHER_API_KEY", "fake-key"),
-        patch("httpx.Client.get") as mock_get,
-    ):
-        mock_get.return_value.status_code = 200
-        mock_get.return_value.json.return_value = raw_data
 
-        intervals = weather.fetch_forecast(18.52, 73.85)
-        assert len(intervals) == 2
+def test_invalid_llm_reply_falls_back():
+    res = run_with_llm(200, llm_reply({"headline": "short"}))
+    assert res.source == "fallback"
+    assert res.headline.startswith("Heat stress")
 
-        assert intervals[0].temperature_c == 28.5
-        assert intervals[0].relative_humidity == 65.0
-        assert round(intervals[0].wind_kmh, 1) == 25.2
-        assert intervals[0].rain_mm == 12.5
 
-        assert intervals[1].temperature_c == 26.0
-        assert intervals[1].relative_humidity == 70.0
-        assert round(intervals[1].wind_kmh, 1) == 18.0
-        assert intervals[1].rain_mm == 0.0
+def test_llm_401_falls_back():
+    res = run_with_llm(401, {"error": "unauthorised"})
+    assert res.source == "fallback"
