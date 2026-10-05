@@ -1,10 +1,12 @@
 export type SeverityBand = "LOW" | "MODERATE" | "HIGH";
 export type AdvisorySource = "bypass" | "llm" | "fallback";
-
-export interface User {
-  id: number;
-  email: string;
-}
+export type Threat =
+  | "Extreme Heat"
+  | "Frost Damage"
+  | "Excess Precipitation"
+  | "Wind Lodging"
+  | "Fungal Disease Pressure"
+  | "None";
 
 export interface StageSummary {
   id: string;
@@ -34,7 +36,7 @@ export interface GeocodeCandidate {
 export interface LatestRiskSummary {
   score: number;
   severity: SeverityBand;
-  primary_threat: string;
+  primary_threat: Threat | string;
   created_at: string;
   is_stale: boolean;
 }
@@ -52,8 +54,8 @@ export interface PlotSummary {
     bbch: string;
   };
   location_name: string;
-  latitude?: number;
-  longitude?: number;
+  latitude: number;
+  longitude: number;
   sowing_date: string;
   days_after_sowing: number;
   latest_risk: LatestRiskSummary | null;
@@ -113,10 +115,10 @@ export interface PlotDetailInfo {
   id: number;
   name: string;
   crop: string;
-  crop_id?: string;
+  crop_id: string;
   scientific_name: string;
   stage: string;
-  stage_id?: string;
+  stage_id: string;
   bbch: string;
   location_name: string;
   latitude?: number;
@@ -128,7 +130,7 @@ export interface PlotDetailInfo {
 export interface RiskDetailInfo {
   score: number;
   severity: SeverityBand;
-  primary_threat: string;
+  primary_threat: Threat | string;
   hazard_indices: {
     heat: number;
     frost: number;
@@ -138,6 +140,7 @@ export interface RiskDetailInfo {
   };
   created_at: string;
   is_stale: boolean;
+  forecast_fetched_at: string;
 }
 
 export interface PlotRiskResponse {
@@ -148,6 +151,8 @@ export interface PlotRiskResponse {
     digest: WeatherDigest;
     intervals: ForecastInterval[];
   };
+  // True when this response fetched a new forecast.
+  refreshed: boolean;
 }
 
 export interface ApiErrorEnvelope {

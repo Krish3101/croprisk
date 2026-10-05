@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../api";
@@ -8,6 +8,17 @@ import { HazardBars } from "../components/HazardBars";
 import { Advisory } from "../components/Advisory";
 import { ForecastChart } from "../components/ForecastChart";
 import { PlotDialog } from "../components/PlotDialog";
+import { DeleteDialog } from "../components/DeleteDialog";
+import { DigestStrip } from "../components/DigestStrip";
+
+// Matches the backend: a new forecast can be fetched 10 minutes after the last one.
+const REFRESH_COOLDOWN_MS = 10 * 60 * 1000;
+
+function formatDate(iso: string): string {
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
 
 export const PlotDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,30 +27,27 @@ export const PlotDetail: React.FC = () => {
   const queryClient = useQueryClient();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
+  const [now, setNow] = useState(() => Date.now());
 
-  const {
-    data: riskData,
-    isPending,
-    isRefetching,
-    fetchStatus,
-    error,
-    refetch,
-  } = useQuery({
+  // The plot list gives the edit form its initial values, also after a direct page load.
+  const { data: plots } = useQuery({ queryKey: ["plots"], queryFn: api.getPlots });
+  const initialPlot = plots?.find((p) => p.id === plotId);
+
+  const { data: riskData, isPending, isRefetching, fetchStatus, error, refetch } = useQuery({
     queryKey: ["plotRisk", plotId],
-    queryFn: () => api.getPlotRisk(plotId, false),
+    queryFn: () => api.getPlotRisk(plotId),
     enabled: !isNaN(plotId),
-    retry: 1,
+    retry: (failureCount, err) => {
+      if (err instanceof ApiError && err.statusCode < 500) return false;
+      return failureCount < 1;
+    },
   });
 
-  const { data: crops = [] } = useQuery({
-    queryKey: ["crops"],
-    queryFn: api.getCrops,
-  });
+  const { data: crops = [] } = useQuery({ queryKey: ["crops"], queryFn: api.getCrops });
 
   const refreshMutation = useMutation({
-    mutationFn: () => api.getPlotRisk(plotId, true),
+    mutationFn: () => api.refreshPlotRisk(plotId),
     onSuccess: (updated) => {
       queryClient.setQueryData(["plotRisk", plotId], updated);
       queryClient.invalidateQueries({ queryKey: ["plots"] });
@@ -49,7 +57,6 @@ export const PlotDetail: React.FC = () => {
   const editMutation = useMutation({
     mutationFn: (data: PlotCreateInput) => api.updatePlot(plotId, data),
     onSuccess: () => {
-      // Editing invalidates the assessment; refetch will recompute against the new stage
       queryClient.invalidateQueries({ queryKey: ["plotRisk", plotId] });
       queryClient.invalidateQueries({ queryKey: ["plots"] });
     },
@@ -63,136 +70,135 @@ export const PlotDetail: React.FC = () => {
     },
   });
 
-  const handleDelete = async () => {
-    setDeleteLoading(true);
-    try {
-      await deleteMutation.mutateAsync();
-    } finally {
-      setDeleteLoading(false);
-      if (deleteDialogRef.current?.open) {
-        deleteDialogRef.current.close();
-      }
-    }
-  };
+  // Re-enable Recalculate when the cooldown ends.
+  useEffect(() => setNow(Date.now()), [riskData]);
+  const fetchedAt = riskData ? Date.parse(riskData.risk.forecast_fetched_at) : NaN;
+  const cooldownLeft = fetchedAt + REFRESH_COOLDOWN_MS - now;
+  useEffect(() => {
+    if (!(cooldownLeft > 0)) return;
+    const timer = setTimeout(() => setNow(Date.now()), cooldownLeft);
+    return () => clearTimeout(timer);
+  }, [cooldownLeft]);
 
-  const openDeleteModal = () => {
-    deleteDialogRef.current?.showModal();
-  };
+  const isNotFound = error instanceof ApiError && error.statusCode === 404;
+  const plotName = riskData?.plot.name || initialPlot?.name || `Field #${plotId}`;
 
-  const closeDeleteModal = () => {
-    deleteDialogRef.current?.close();
-  };
-
-  // A paused query is pending with nothing in flight and no error, so without this branch
-  // the component would fall through to the null return below and render a blank page.
-  if (isPending && fetchStatus === "paused") {
-    return (
-      <div className="max-w-4xl mx-auto p-6 mt-12">
-        <div className="bg-stone-50 border border-stone-300 rounded-xl p-6 text-center space-y-3">
-          <h2 className="text-base font-bold text-stone-900">Waiting for a connection</h2>
-          <p className="text-xs text-stone-600 max-w-md mx-auto">
-            The risk assessment needs the network. It will run as soon as you are back online.
-          </p>
-          <div className="pt-2 flex justify-center gap-3">
-            <Link
-              to="/"
-              className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-semibold rounded-md transition"
-            >
-              ← Back to Dashboard
-            </Link>
-            <button
-              onClick={() => refetch()}
-              className="px-4 py-2 bg-stone-700 hover:bg-stone-800 text-white text-xs font-semibold rounded-md transition"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isPending) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-stone-500 text-sm">
-        Computing agronomic risk against current 5-day weather...
-      </div>
-    );
-  }
-
-  if (error) {
-    const errorMsg =
-      error instanceof ApiError
-        ? error.message
-        : "Failed to evaluate field risk. Weather service may be unreachable.";
-    return (
-      <div className="max-w-4xl mx-auto p-6 mt-12">
-        <div className="bg-rose-50 border border-rose-300 rounded-xl p-6 text-center space-y-3">
-          <span className="text-3xl">⚠</span>
-          <h2 className="text-base font-bold text-rose-900">Unable to assess field risk</h2>
-          <p className="text-xs text-rose-700 max-w-md mx-auto">{errorMsg}</p>
-          <div className="pt-2 flex justify-center gap-3">
-            <Link
-              to="/"
-              className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-semibold rounded-md transition"
-            >
-              ← Back to Dashboard
-            </Link>
-            <button
-              onClick={() => refetch()}
-              className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white text-xs font-semibold rounded-md transition"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!riskData) return null;
-
-  const { plot, risk, advisory, weather } = riskData;
-
-  const currentCrop = crops.find((c) => c.common_name === plot.crop || c.scientific_name === plot.scientific_name);
-  const currentStage = currentCrop?.stages.find((s) => s.id === plot.stage_id);
-
-  return (
+  const page = (content: React.ReactNode) => (
     <div className="min-h-screen bg-stone-100 pb-16">
       <header className="bg-white border-b border-stone-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link
             to="/"
-            className="text-xs font-semibold text-stone-600 hover:text-stone-900 flex items-center gap-1.5 transition"
+            className="text-xs sm:text-sm font-semibold text-stone-600 hover:text-stone-900 flex items-center gap-1.5 transition"
           >
             ← Back to Dashboard
           </Link>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsEditOpen(true)}
-              className="px-3 py-1.5 text-xs font-semibold rounded border border-stone-300 text-stone-700 hover:bg-stone-50 transition"
-            >
-              Edit Field / Stage
-            </button>
-            <button
-              onClick={openDeleteModal}
-              className="px-3 py-1.5 text-xs font-semibold rounded border border-rose-200 text-rose-700 hover:bg-rose-50 transition"
-            >
-              Delete
-            </button>
-          </div>
+          {!isNotFound && (
+            <div className="flex items-center gap-2">
+              {initialPlot && (
+                <button
+                  onClick={() => setIsEditOpen(true)}
+                  className="px-3 py-1.5 text-xs font-semibold rounded border border-stone-300 text-stone-700 hover:bg-stone-50 transition"
+                >
+                  Edit field
+                </button>
+              )}
+              <button
+                onClick={() => deleteDialogRef.current?.showModal()}
+                className="px-3 py-1.5 text-xs font-semibold rounded border border-rose-200 text-rose-700 hover:bg-rose-50 transition"
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </div>
       </header>
+      {content}
+      <DeleteDialog
+        ref={deleteDialogRef}
+        plotName={plotName}
+        onConfirm={() => deleteMutation.mutateAsync()}
+      />
+    </div>
+  );
 
+  if (isPending && fetchStatus === "paused") {
+    return page(
+      <main className="max-w-4xl mx-auto p-6 mt-12">
+        <div className="bg-stone-50 border border-stone-300 rounded-xl p-6 text-center space-y-3">
+          <h1 className="text-lg font-bold text-stone-900">Waiting for a connection</h1>
+          <p className="text-sm text-stone-600 max-w-md mx-auto">
+            The risk assessment needs the network. It will evaluate as soon as your device reconnects.
+          </p>
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-stone-800 hover:bg-stone-900 text-white text-xs font-semibold rounded-md transition"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (isPending) {
+    return page(
+      <main className="max-w-4xl mx-auto p-6 mt-12">
+        <div role="status" className="flex items-center justify-center text-stone-600 text-sm">
+          Computing agronomic risk against current 5-day weather...
+        </div>
+      </main>
+    );
+  }
+
+  if (error || !riskData) {
+    let message = "We couldn't get a forecast for this field. This usually clears in a few minutes.";
+    if (isNotFound) message = "This field was not found or has been deleted.";
+    else if (error instanceof ApiError && error.statusCode !== 503) message = error.message;
+
+    return page(
+      <main className="max-w-4xl mx-auto p-6 mt-12">
+        <div className="bg-rose-50 border border-rose-300 rounded-xl p-8 text-center space-y-4">
+          <span className="text-3xl" aria-hidden="true">⚠</span>
+          <h1 className="text-xl font-bold text-rose-900">
+            {isNotFound ? "Field not found" : "Unable to assess field risk"}
+          </h1>
+          <p className="text-sm text-rose-800 max-w-md mx-auto">{message}</p>
+          {!isNotFound && (
+            <button
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white text-xs font-semibold rounded-md transition"
+            >
+              Retry assessment
+            </button>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  const { plot, risk, advisory, weather } = riskData;
+  const currentStage = crops
+    .find((c) => c.id === plot.crop_id)
+    ?.stages.find((s) => s.id === plot.stage_id);
+  const inCooldown = cooldownLeft > 0;
+  const minutesAgo = Math.max(0, Math.floor((now - fetchedAt) / 60000));
+  const refreshing = refreshMutation.isPending || isRefetching;
+
+  return page(
+    <>
       <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         {risk.is_stale && (
-          <div className="p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3 text-amber-900 text-xs sm:text-sm">
-            <span className="text-base font-bold">▲</span>
+          <div
+            role="status"
+            className="p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3 text-amber-900 text-sm"
+          >
+            <span className="text-base font-bold" aria-hidden="true">▲</span>
             <div>
-              <p className="font-bold">Live weather provider is currently unreachable</p>
+              <p className="font-bold">Showing cached assessment</p>
               <p className="text-amber-800 text-xs mt-0.5">
-                Serving stored risk assessment calculated on {new Date(risk.created_at).toLocaleString()}.
-                Freshness rules guarantee this answers the current growth stage.
+                Showing the assessment saved on {formatDate(risk.forecast_fetched_at)}. The live
+                weather provider is unreachable right now.
               </p>
             </div>
           </div>
@@ -204,34 +210,55 @@ export const PlotDetail: React.FC = () => {
               Field Assessment
             </span>
             <h1 className="text-2xl font-black text-stone-900">{plot.name}</h1>
-            <p className="text-xs sm:text-sm text-stone-600">
-              <span className="font-semibold text-stone-800">{plot.crop}</span> (<em>{plot.scientific_name}</em>)
+            <p className="text-sm text-stone-700">
+              <span className="font-semibold">{plot.crop}</span> (<em>{plot.scientific_name}</em>)
               {" · "}
-              Growth Stage: <span className="font-semibold text-stone-800">{plot.stage}</span> (BBCH {plot.bbch})
+              Growth Stage: <span className="font-semibold">{plot.stage}</span> (BBCH {plot.bbch})
             </p>
-            <p className="text-xs text-stone-500">
+            <p className="text-xs text-stone-600">
               {plot.location_name} · Sown {plot.sowing_date} ({plot.days_after_sowing} days ago)
+            </p>
+            <p className="text-[11px] text-stone-600 pt-1">
+              Updated {formatDate(risk.forecast_fetched_at)} · Forecast: OpenWeather
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 border-t md:border-t-0 md:border-l border-stone-100 pt-4 md:pt-0 md:pl-6">
             <div className="space-y-1">
-              <span className="text-xs text-stone-500 font-medium block">Aggregated Risk</span>
+              <span className="text-xs text-stone-600 font-medium block">Aggregated Risk</span>
               <ScoreBadge score={risk.score} severity={risk.severity} size="lg" />
-              <p className="text-xs text-stone-500 mt-1">
-                Primary Threat: <strong className="text-stone-900">{risk.primary_threat}</strong>
+              <p className="text-xs text-stone-600 mt-1">
+                Primary Threat:{" "}
+                <strong className="text-stone-900">
+                  {risk.primary_threat === "None" ? "No significant hazard" : risk.primary_threat}
+                </strong>
               </p>
             </div>
 
-            <button
-              onClick={() => refreshMutation.mutate()}
-              disabled={refreshMutation.isPending || isRefetching}
-              className="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded-md border border-stone-300 transition flex items-center gap-1.5 self-stretch sm:self-auto justify-center disabled:opacity-50"
-            >
-              {refreshMutation.isPending || isRefetching ? "Refreshing..." : "↻ Recalculate Now"}
-            </button>
+            <div className="flex flex-col items-start gap-1">
+              <button
+                onClick={() => refreshMutation.mutate()}
+                disabled={refreshing || inCooldown}
+                title={inCooldown ? "A new forecast can be fetched 10 minutes after the last one." : undefined}
+                className="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded-md border border-stone-300 transition flex items-center gap-1.5 whitespace-nowrap disabled:opacity-50"
+              >
+                {refreshing ? "Refreshing..." : "↻ Recalculate"}
+              </button>
+              {riskData.refreshed === false && refreshMutation.isSuccess && (
+                <p role="status" className="text-xs text-stone-600">
+                  Updated {minutesAgo} min ago
+                </p>
+              )}
+              {refreshMutation.error && (
+                <p role="alert" className="text-xs text-rose-700 mt-1 max-w-[180px]">
+                  {(refreshMutation.error as ApiError).message || "Refresh failed"}
+                </p>
+              )}
+            </div>
           </div>
         </div>
+
+        <DigestStrip digest={weather.digest} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
@@ -260,50 +287,8 @@ export const PlotDetail: React.FC = () => {
           await refetch();
         }}
         crops={crops}
-        initialData={{
-          id: plot.id,
-          name: plot.name,
-          crop: { id: plot.crop_id || currentCrop?.id || "wheat", common_name: plot.crop },
-          stage: { id: plot.stage_id || "wheat.tillering", name: plot.stage, bbch: plot.bbch },
-          location_name: plot.location_name,
-          latitude: plot.latitude,
-          longitude: plot.longitude,
-          sowing_date: plot.sowing_date,
-          days_after_sowing: plot.days_after_sowing,
-          latest_risk: null,
-        }}
+        initialData={initialPlot}
       />
-
-      <dialog
-        ref={deleteDialogRef}
-        onClose={closeDeleteModal}
-        className="p-0 rounded-xl shadow-2xl backdrop:bg-stone-900/40 w-full max-w-sm border border-stone-200"
-      >
-        <div className="p-6 space-y-4 bg-white text-stone-900">
-          <h3 className="text-base font-bold text-rose-900">Delete {plot.name}?</h3>
-          <p className="text-xs text-stone-600 leading-relaxed">
-            Are you sure you want to delete this field? Its historical assessments and data will be permanently removed.
-          </p>
-          <div className="flex justify-end gap-2 pt-2 border-t border-stone-100">
-            <button
-              type="button"
-              onClick={closeDeleteModal}
-              disabled={deleteLoading}
-              className="px-3 py-1.5 text-xs font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-md transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleteLoading}
-              className="px-3 py-1.5 text-xs font-semibold text-white bg-rose-700 hover:bg-rose-800 rounded-md transition disabled:opacity-50"
-            >
-              {deleteLoading ? "Deleting..." : "Confirm Delete"}
-            </button>
-          </div>
-        </div>
-      </dialog>
-    </div>
+    </>
   );
 };

@@ -19,7 +19,9 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
   initialData,
 }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const todayStr = new Date().toISOString().split("T")[0];
+  // Use farm-local ISO date (YYYY-MM-DD) via en-CA format
+  const todayStr = new Date().toLocaleDateString("en-CA");
+  const minDateStr = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toLocaleDateString("en-CA");
 
   const [name, setName] = useState("");
   const [cropId, setCropId] = useState("");
@@ -43,8 +45,8 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
         setStageId(initialData.stage.id);
         setLocationName(initialData.location_name);
         setSowingDate(initialData.sowing_date);
-        setLatitude(initialData.latitude ?? 18.5204);
-        setLongitude(initialData.longitude ?? 73.8567);
+        setLatitude(initialData.latitude);
+        setLongitude(initialData.longitude);
       } else {
         setName("");
         setCropId("");
@@ -66,13 +68,28 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
   const handleCropChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newCropId = e.target.value;
     setCropId(newCropId);
-    const crop = crops.find((c) => c.id === newCropId);
-    if (!crop || !crop.stages.some((s) => s.id === stageId)) {
-      setStageId(crop?.stages[0]?.id || "");
-    }
+    // Reset stageId to empty so the grower intentionally chooses the correct stage
+    setStageId("");
   };
 
   const selectedCrop = crops.find((c) => c.id === cropId);
+
+  // Field order in the form, so focus lands on the first problem.
+  const fieldInputIds: [string, string][] = [
+    ["name", "plot-name"],
+    ["crop_id", "plot-crop"],
+    ["stage_id", "plot-stage"],
+    ["location_name", "plot-location"],
+    ["latitude", "plot-location"],
+    ["longitude", "plot-location"],
+    ["sowing_date", "plot-sowing-date"],
+  ];
+
+  const showFieldErrors = (errors: Record<string, string>) => {
+    setFieldErrors(errors);
+    const first = fieldInputIds.find(([field]) => errors[field]);
+    if (first) dialogRef.current?.querySelector<HTMLElement>(`#${first[1]}`)?.focus();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +110,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
     }
 
     if (Object.keys(errors).length > 0) {
-      setFieldErrors(errors);
+      showFieldErrors(errors);
       return;
     }
 
@@ -113,7 +130,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
       if (err instanceof ApiError) {
         setGeneralError(err.message);
         if (err.fields) {
-          setFieldErrors(err.fields);
+          showFieldErrors(err.fields);
         }
       } else {
         setGeneralError("An unexpected error occurred. Please try again.");
@@ -127,38 +144,42 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      aria-labelledby="plot-dialog-title"
       className="p-0 rounded-xl shadow-2xl backdrop:bg-stone-900/40 w-full max-w-lg border border-stone-200"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white text-stone-900">
         <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-          <h2 className="text-lg font-bold">
-            {initialData ? "Edit Field Details" : "Register New Field"}
+          <h2 id="plot-dialog-title" className="text-lg font-bold">
+            {initialData ? "Edit field" : "Add a field"}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-stone-400 hover:text-stone-600 text-lg font-semibold"
+            aria-label="Close"
+            className="text-stone-400 hover:text-stone-600 text-lg font-semibold px-2 py-1 rounded"
           >
             ✕
           </button>
         </div>
 
         {generalError && (
-          <div className="p-3 text-xs bg-rose-50 text-rose-800 border border-rose-200 rounded-md">
+          <div role="alert" className="p-3 text-xs bg-rose-50 text-rose-800 border border-rose-200 rounded-md">
             {generalError}
           </div>
         )}
 
         <div>
-          <label htmlFor="plot-name" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
-            Field Name *
+          <label htmlFor="plot-name" className="block text-sm font-semibold text-stone-700 mb-1">
+            Field name <span className="text-rose-600">*</span>
           </label>
           <input
             id="plot-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. North Acre"
+            aria-invalid={Boolean(fieldErrors.name)}
+            aria-describedby={fieldErrors.name ? "plot-name-err" : undefined}
+            placeholder="e.g. North Acre or Tubewell Plot"
             className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 ${
               fieldErrors.name
                 ? "border-rose-300 focus:ring-rose-400"
@@ -166,19 +187,23 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
             }`}
           />
           {fieldErrors.name && (
-            <p className="text-xs text-rose-600 mt-1">{fieldErrors.name}</p>
+            <p id="plot-name-err" role="alert" className="text-xs text-rose-600 mt-1">
+              {fieldErrors.name}
+            </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="plot-crop" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
-            Crop *
+          <label htmlFor="plot-crop" className="block text-sm font-semibold text-stone-700 mb-1">
+            Crop <span className="text-rose-600">*</span>
           </label>
           <select
             id="plot-crop"
             value={cropId}
             onChange={handleCropChange}
             data-testid="crop-select"
+            aria-invalid={Boolean(fieldErrors.crop_id)}
+            aria-describedby={fieldErrors.crop_id ? "plot-crop-err" : undefined}
             className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 bg-white ${
               fieldErrors.crop_id
                 ? "border-rose-300 focus:ring-rose-400"
@@ -193,13 +218,15 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
             ))}
           </select>
           {fieldErrors.crop_id && (
-            <p className="text-xs text-rose-600 mt-1">{fieldErrors.crop_id}</p>
+            <p id="plot-crop-err" role="alert" className="text-xs text-rose-600 mt-1">
+              {fieldErrors.crop_id}
+            </p>
           )}
         </div>
 
         <div>
-          <label htmlFor="plot-stage" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
-            Current Growth Stage *
+          <label htmlFor="plot-stage" className="block text-sm font-semibold text-stone-700 mb-1">
+            Current growth stage <span className="text-rose-600">*</span>
           </label>
           <select
             id="plot-stage"
@@ -207,6 +234,8 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
             onChange={(e) => setStageId(e.target.value)}
             disabled={!cropId}
             data-testid="stage-select"
+            aria-invalid={Boolean(fieldErrors.stage_id)}
+            aria-describedby={fieldErrors.stage_id ? "plot-stage-err" : undefined}
             className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 bg-white disabled:bg-stone-100 disabled:text-stone-400 ${
               fieldErrors.stage_id
                 ? "border-rose-300 focus:ring-rose-400"
@@ -223,7 +252,9 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
             ))}
           </select>
           {fieldErrors.stage_id && (
-            <p className="text-xs text-rose-600 mt-1">{fieldErrors.stage_id}</p>
+            <p id="plot-stage-err" role="alert" className="text-xs text-rose-600 mt-1">
+              {fieldErrors.stage_id}
+            </p>
           )}
         </div>
 
@@ -242,15 +273,18 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
         />
 
         <div>
-          <label htmlFor="plot-sowing-date" className="block text-xs font-semibold text-stone-700 uppercase tracking-wide mb-1">
-            Sowing Date *
+          <label htmlFor="plot-sowing-date" className="block text-sm font-semibold text-stone-700 mb-1">
+            Sowing date <span className="text-rose-600">*</span>
           </label>
           <input
             id="plot-sowing-date"
             type="date"
             value={sowingDate}
+            min={minDateStr}
             max={todayStr}
             onChange={(e) => setSowingDate(e.target.value)}
+            aria-invalid={Boolean(fieldErrors.sowing_date)}
+            aria-describedby={fieldErrors.sowing_date ? "plot-sowing-err" : undefined}
             className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 ${
               fieldErrors.sowing_date
                 ? "border-rose-300 focus:ring-rose-400"
@@ -258,7 +292,9 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
             }`}
           />
           {fieldErrors.sowing_date && (
-            <p className="text-xs text-rose-600 mt-1">{fieldErrors.sowing_date}</p>
+            <p id="plot-sowing-err" role="alert" className="text-xs text-rose-600 mt-1">
+              {fieldErrors.sowing_date}
+            </p>
           )}
         </div>
 
@@ -267,16 +303,16 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="px-4 py-2 text-xs font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-md transition"
+            className="px-4 py-2 text-sm font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-md transition"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-md transition disabled:opacity-50"
+            className="px-4 py-2 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-md transition disabled:opacity-50"
           >
-            {loading ? "Saving..." : initialData ? "Save Changes" : "Register Plot"}
+            {loading ? "Saving..." : initialData ? "Save Changes" : "Add Field"}
           </button>
         </div>
       </form>

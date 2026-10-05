@@ -1,9 +1,12 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
-import { PlotDetail } from "./pages/PlotDetail";
+
+// Lazy load PlotDetail to code-split recharts and detail bundle
+const PlotDetail = React.lazy(() =>
+  import("./pages/PlotDetail").then((module) => ({ default: module.PlotDetail }))
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,13 +20,23 @@ const queryClient = new QueryClient({
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/plots/:id" element={<PlotDetail />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Suspense
+          fallback={
+            <div
+              role="status"
+              className="min-h-screen bg-stone-100 flex items-center justify-center text-sm text-stone-600"
+            >
+              Loading...
+            </div>
+          }
+        >
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/plots/:id" element={<PlotDetail />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </QueryClientProvider>
   );
