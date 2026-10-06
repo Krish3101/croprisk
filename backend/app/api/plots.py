@@ -65,7 +65,7 @@ def _summary(row: RiskAssessment, is_stale: bool) -> LatestRiskSummary:
     )
 
 
-def _latest_risk(plot: Plot, row: RiskAssessment | None, db: Session) -> LatestRiskSummary | None:
+def _latest_risk(plot: Plot, row: RiskAssessment | None) -> LatestRiskSummary | None:
     if row is None or get_stage(plot.crop_id, plot.stage_id) is None:
         return None
     now = datetime.datetime.now(UTC)
@@ -90,7 +90,7 @@ def _latest_risk(plot: Plot, row: RiskAssessment | None, db: Session) -> LatestR
     return None
 
 
-def _to_plot_summary(plot: Plot, row: RiskAssessment | None, db: Session) -> PlotSummary:
+def _to_plot_summary(plot: Plot, row: RiskAssessment | None) -> PlotSummary:
     crop = get_crop(plot.crop_id)
     stage = get_stage(plot.crop_id, plot.stage_id)
     return PlotSummary(
@@ -107,14 +107,14 @@ def _to_plot_summary(plot: Plot, row: RiskAssessment | None, db: Session) -> Plo
         longitude=plot.longitude,
         sowing_date=plot.sowing_date.isoformat(),
         days_after_sowing=max(0, (datetime.date.today() - plot.sowing_date).days),
-        latest_risk=_latest_risk(plot, row, db),
+        latest_risk=_latest_risk(plot, row),
     )
 
 
 @router.get("", response_model=list[PlotSummary])
 def list_plots(db: Session = Depends(get_db)) -> list[PlotSummary]:
     # Single user with a handful of fields, so one query per plot is fine here.
-    summaries = [_to_plot_summary(plot, plot.risk_assessment, db) for plot in db.query(Plot)]
+    summaries = [_to_plot_summary(plot, plot.risk_assessment) for plot in db.query(Plot)]
     # Highest risk first, unassessed last, then by name.
     summaries.sort(key=lambda s: (-(s.latest_risk.score if s.latest_risk else -1), s.name))
     return summaries
@@ -128,7 +128,7 @@ def create_plot(req: PlotCreateRequest, db: Session = Depends(get_db)) -> PlotSu
     db.add(plot)
     db.commit()
     db.refresh(plot)
-    return _to_plot_summary(plot, None, db)
+    return _to_plot_summary(plot, None)
 
 
 @router.patch("/{plot_id}", response_model=PlotSummary)
@@ -148,7 +148,7 @@ def update_plot(
         plot.updated_at = datetime.datetime.now(UTC).isoformat()
         db.commit()
         db.refresh(plot)
-    return _to_plot_summary(plot, plot.risk_assessment, db)
+    return _to_plot_summary(plot, plot.risk_assessment)
 
 
 @router.delete("/{plot_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -80,8 +80,9 @@ FALLBACK_TABLE = {
         "Check young growth for frost damage after the coldest night.",
     ),
     Threat.PRECIP: HazardText(
-        "Heavy rain", "total rain", lambda d: d.total_rain_mm,
-        lambda c, s: s.r_crit_24h, "this stage's limit for any 24 h", " mm",
+        "Heavy rain", "five-day rain total", lambda d: d.total_rain_mm,
+        # The digest has no wettest-24h figure, so say the two numbers cover different windows.
+        lambda c, s: s.r_crit_24h, "this stage's limit, which applies to any single 24 h", " mm",
         "Clear drains and field outlets before the heaviest rain.",
         "Walk the low spots after the rain and drain any standing water.",
     ),

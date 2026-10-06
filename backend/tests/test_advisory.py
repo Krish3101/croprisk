@@ -52,6 +52,12 @@ def test_fallback_is_valid_for_every_crop_and_stage(threat):
             Advisory.model_validate(adv.model_dump())
 
 
+def test_precip_fallback_does_not_compare_five_day_total_to_24h_limit():
+    adv = advisory.build_fallback_advisory(WHEAT, ANTHESIS, high_result(Threat.PRECIP), DIGEST)
+    assert "five-day rain total is 10.0 mm" in adv.impact_analysis
+    assert f"applies to any single 24 h is {ANTHESIS.r_crit_24h} mm" in adv.impact_analysis
+
+
 def test_frost_fallback_cites_engine_min_temp_and_stage_threshold():
     intervals = make_intervals(temp=8.0)
     intervals[10] = dataclasses.replace(intervals[10], temperature_c=-1.5)

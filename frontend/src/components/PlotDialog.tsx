@@ -72,6 +72,9 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
     setStageId("");
   };
 
+  // Editing keeps an old date as is; the min attribute would otherwise block the native submit.
+  const sowingDateUnchanged = Boolean(initialData) && sowingDate === initialData?.sowing_date;
+
   const selectedCrop = crops.find((c) => c.id === cropId);
 
   // Field order in the form, so focus lands on the first problem.
@@ -116,7 +119,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
 
     setLoading(true);
     try {
-      await onSave({
+      const payload: PlotCreateInput = {
         name: name.trim(),
         crop_id: cropId,
         stage_id: stageId,
@@ -124,7 +127,15 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
         latitude: latitude as number,
         longitude: longitude as number,
         sowing_date: sowingDate,
-      });
+      };
+      if (sowingDateUnchanged) {
+        // The API rejects sowing dates over 400 days old, so an untouched old date must not be resent.
+        // The edit mutation takes the same shape with sowing_date optional.
+        const { sowing_date: _unchanged, ...rest } = payload;
+        await onSave(rest as PlotCreateInput);
+      } else {
+        await onSave(payload);
+      }
       onClose();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -280,7 +291,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
             id="plot-sowing-date"
             type="date"
             value={sowingDate}
-            min={minDateStr}
+            min={sowingDateUnchanged ? undefined : minDateStr}
             max={todayStr}
             onChange={(e) => setSowingDate(e.target.value)}
             aria-invalid={Boolean(fieldErrors.sowing_date)}

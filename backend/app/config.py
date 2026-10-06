@@ -27,7 +27,7 @@ class Settings(BaseSettings):
             )
         if not self.OPENROUTER_API_KEY:
             logger.warning(
-                "OPENROUTER_API_KEY is unset; advisories will always use deterministic fallback."
+                "OPENROUTER_API_KEY is unset; only low-risk fields get the fixed text; the rest use rule-based advice."
             )
 
 

@@ -84,8 +84,8 @@ Set in `backend/.env` (environment variables win):
 | `OPENROUTER_API_KEY` | Optional. LLM explanations; without it the rule-based text is used. | empty |
 | `DATABASE_URL` | SQLite URL | `croprisk.db` inside `backend/` (absolute path, so the working directory doesn't matter) |
 | `LOG_LEVEL` | Python log level | `INFO` |
-| `API_PORT` | Backend port for `start.sh` and the Vite proxy | `8000` |
-| `WEB_PORT` | Frontend port for `start.sh` | `5173` |
+
+`API_PORT` (default `8000`) and `WEB_PORT` (default `5173`) are shell variables read by `scripts/start.sh` (and `API_PORT` by the Vite proxy), not `.env` settings, e.g. `API_PORT=9000 ./scripts/start.sh`.
 
 ## API
 
@@ -110,9 +110,9 @@ cd backend && uv run pytest && uv run ruff check . && uv run ruff format --check
 cd frontend && npm test && npm run build
 ```
 
-**98 backend tests:** the 10 golden vectors and hazard edge cases, catalogue validation, forecast parsing over an OpenWeather-shaped fixture with `httpx.MockTransport` (missing values, HTML, 401, 429, timeouts), caching rules (location change, stage flips, 12 h TTL, 48 h cap, cooldown), two concurrent first loads making one call, the schema gate, TrustedHost, and that the API key never reaches the logs. No test calls a real API.
+**100 backend tests:** the 10 golden vectors and hazard edge cases, catalogue validation, forecast parsing over an OpenWeather-shaped fixture with `httpx.MockTransport` (missing values, HTML, 401, 429, timeouts), caching rules (location change, stage flips, 12 h TTL, 48 h cap, cooldown), two concurrent first loads making one call, the schema gate, TrustedHost, and that the API key never reaches the logs. No test calls a real API.
 
-**14 frontend tests:** the location picker (keyboard selection, geocode failure alert), the chart's threshold lines, the Recalculate cooldown, the Edit button on a direct page load and the 404/503 pages, the field dialog (stage list, focus on the first invalid field, server errors), and the score badge.
+**16 frontend tests:** the location picker (keyboard selection, geocode failure alert), the chart's threshold lines, the Recalculate cooldown, the Edit button on a direct page load and the 404/503 pages, the field dialog (stage list, focus on the first invalid field, server errors, leaving an unchanged old sowing date out of an edit), and the score badge.
 
 ## Limitations
 

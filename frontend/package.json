@@ -2,7 +2,12 @@
   "name": "croprisk-frontend",
   "private": true,
   "version": "0.1.0",
+  "description": "Web interface for CropRisk, a crop- and growth-stage-aware weather risk tool",
+  "author": "Krish Kalya",
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
