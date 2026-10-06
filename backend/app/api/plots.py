@@ -20,11 +20,13 @@ from app.schemas import (
     StageRef,
 )
 from app.services.assessment import (
+    CACHE_TTL,
     STALE_SERVE_CAP,
-    cached_or_rescore,
     forecast_age,
     get_plot_risk,
     is_row_relevant,
+    location_key,
+    preview_score,
 )
 from app.services.catalogue_loader import get_crop, get_stage
 
@@ -67,9 +69,20 @@ def _latest_risk(plot: Plot, row: RiskAssessment | None, db: Session) -> LatestR
     if row is None or get_stage(plot.crop_id, plot.stage_id) is None:
         return None
     now = datetime.datetime.now(UTC)
-    fresh = cached_or_rescore(plot, row, now, db)
-    if fresh is not None:
-        return _summary(fresh, is_stale=False)
+    same_place = row.location_key == location_key(plot.latitude, plot.longitude)
+    if same_place and forecast_age(row, now) < CACHE_TTL:
+        if is_row_relevant(row, plot):
+            return _summary(row, is_stale=False)
+        # Stage or catalogue changed: score in memory only. The list never shows the advisory,
+        # so the LLM call (and the saved re-score) waits for the risk route.
+        result = preview_score(plot, row)
+        return LatestRiskSummary(
+            score=result.score,
+            severity=result.severity,
+            primary_threat=result.primary_threat,
+            created_at=row.created_at,
+            is_stale=False,
+        )
     # An old forecast for the same place and stage is still worth showing, marked stale,
     # but not past the same 48 h cap the risk route uses.
     if is_row_relevant(row, plot) and forecast_age(row, now) <= STALE_SERVE_CAP:

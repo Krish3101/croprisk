@@ -172,6 +172,29 @@ def test_patch_stage_rescores_without_network_call(client, weather):
     assert weather.call_count == 1
 
 
+def test_list_never_calls_llm_and_detail_rescores_with_it(client, weather, monkeypatch):
+    monkeypatch.setattr(settings, "OPENROUTER_API_KEY", "test-key")
+    llm = Mock(side_effect=lambda facts: None)
+    monkeypatch.setattr("app.services.advisory._call_openrouter", llm)
+    plot_id = create_field(client)
+    client.get(f"/api/plots/{plot_id}/risk")
+    assert llm.call_count == 1
+
+    # A stage change makes the stored row out of date; the list scores it without the LLM.
+    client.patch(f"/api/plots/{plot_id}", json={"stage_id": "wheat.grain_fill"})
+    listed = client.get("/api/plots").json()
+    assert listed[0]["latest_risk"] is not None
+    assert llm.call_count == 1
+
+    # The risk route re-scores the row with the LLM advisory, still without a new forecast.
+    detail = client.get(f"/api/plots/{plot_id}/risk").json()
+    assert llm.call_count == 2
+    assert weather.call_count == 1
+    # The in-memory list score matches what the risk route saved.
+    assert listed[0]["latest_risk"]["score"] == detail["risk"]["score"]
+    assert listed[0]["latest_risk"]["severity"] == detail["risk"]["severity"]
+
+
 def test_patch_location_fetches_new_forecast(client, weather):
     plot_id = create_field(client)
     client.get(f"/api/plots/{plot_id}/risk")
