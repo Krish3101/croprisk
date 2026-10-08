@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { CropSummary, PlotCreateInput, PlotSummary } from "../types";
+import { CropSummary, PlotRequest, PlotSummary } from "../types";
 import { LocationPicker } from "./LocationPicker";
 import { ApiError } from "../api";
 
 interface PlotDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: PlotCreateInput) => Promise<void>;
+  onSave: (data: PlotRequest) => Promise<void>;
   crops: CropSummary[];
   initialData?: PlotSummary | null;
 }
@@ -73,11 +73,10 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
   };
 
   // Editing keeps an old date as is; the min attribute would otherwise block the native submit.
-  const sowingDateUnchanged = Boolean(initialData) && sowingDate === initialData?.sowing_date;
 
   const selectedCrop = crops.find((c) => c.id === cropId);
 
-  // Field order in the form, so focus lands on the first problem.
+  // Input order in the form, so focus lands on the first problem.
   const fieldInputIds: [string, string][] = [
     ["name", "plot-name"],
     ["crop_id", "plot-crop"],
@@ -100,7 +99,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
     setFieldErrors({});
 
     const errors: Record<string, string> = {};
-    if (!name.trim()) errors.name = "Field name is required.";
+    if (!name.trim()) errors.name = "Name is required.";
     if (!cropId) errors.crop_id = "Please select a crop.";
     if (!stageId) errors.stage_id = "Please select a growth stage.";
     if (!locationName || latitude === null || longitude === null) {
@@ -119,7 +118,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
 
     setLoading(true);
     try {
-      const payload: PlotCreateInput = {
+      const payload: PlotRequest = {
         name: name.trim(),
         crop_id: cropId,
         stage_id: stageId,
@@ -128,14 +127,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
         longitude: longitude as number,
         sowing_date: sowingDate,
       };
-      if (sowingDateUnchanged) {
-        // The API rejects sowing dates over 400 days old, so an untouched old date must not be resent.
-        // The edit mutation takes the same shape with sowing_date optional.
-        const { sowing_date: _unchanged, ...rest } = payload;
-        await onSave(rest as PlotCreateInput);
-      } else {
-        await onSave(payload);
-      }
+      await onSave(payload);
       onClose();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -155,13 +147,19 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      onClick={(e) => {
+        // Light dismiss: close when clicking the backdrop outside the dialog bounds
+        if (e.target === dialogRef.current) {
+          onClose();
+        }
+      }}
       aria-labelledby="plot-dialog-title"
       className="p-0 rounded-xl shadow-2xl backdrop:bg-stone-900/40 w-full max-w-lg border border-stone-200"
     >
       <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white text-stone-900">
         <div className="flex items-center justify-between border-b border-stone-100 pb-3">
           <h2 id="plot-dialog-title" className="text-lg font-bold">
-            {initialData ? "Edit field" : "Add a field"}
+            {initialData ? "Edit plot" : "Add a plot"}
           </h2>
           <button
             type="button"
@@ -181,7 +179,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
 
         <div>
           <label htmlFor="plot-name" className="block text-sm font-semibold text-stone-700 mb-1">
-            Field name <span className="text-rose-600">*</span>
+            Name <span className="text-rose-600">*</span>
           </label>
           <input
             id="plot-name"
@@ -237,7 +235,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
 
         <div>
           <label htmlFor="plot-stage" className="block text-sm font-semibold text-stone-700 mb-1">
-            Current growth stage <span className="text-rose-600">*</span>
+            Growth stage <span className="text-rose-600">*</span>
           </label>
           <select
             id="plot-stage"
@@ -291,7 +289,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
             id="plot-sowing-date"
             type="date"
             value={sowingDate}
-            min={sowingDateUnchanged ? undefined : minDateStr}
+            min={minDateStr}
             max={todayStr}
             onChange={(e) => setSowingDate(e.target.value)}
             aria-invalid={Boolean(fieldErrors.sowing_date)}
@@ -323,7 +321,7 @@ export const PlotDialog: React.FC<PlotDialogProps> = ({
             disabled={loading}
             className="px-4 py-2 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-md transition disabled:opacity-50"
           >
-            {loading ? "Saving..." : initialData ? "Save Changes" : "Add Field"}
+            {loading ? "Saving..." : "Save"}
           </button>
         </div>
       </form>

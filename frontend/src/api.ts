@@ -1,26 +1,25 @@
 import {
-  ApiErrorEnvelope,
   CropSummary,
   GeocodeCandidate,
-  PlotCreateInput,
-  PlotRiskResponse,
+  PlotRequest,
+  AssessmentResponse,
   PlotSummary,
-  PlotUpdateInput,
 } from "./types";
 
 export class ApiError extends Error {
-  code: string;
   fields?: Record<string, string>;
   statusCode: number;
 
-  constructor(code: string, message: string, statusCode: number, fields?: Record<string, string>) {
+  constructor(message: string, statusCode: number, fields?: Record<string, string>) {
     super(message);
     this.name = "ApiError";
-    this.code = code;
     this.statusCode = statusCode;
     this.fields = fields;
   }
 }
+
+// FastAPI sends detail as a string, or as a list of {loc, msg} for validation errors
+type ErrorDetail = string | { loc?: (string | number)[]; msg?: string }[];
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const defaultHeaders: Record<string, string> = {};
@@ -48,16 +47,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
-    const errorEnv = data as ApiErrorEnvelope | null;
-    if (errorEnv && errorEnv.error) {
-      throw new ApiError(
-        errorEnv.error.code || "unknown_error",
-        errorEnv.error.message || "An unexpected error occurred.",
-        response.status,
-        errorEnv.error.fields
-      );
+    const detail = (data as { detail?: ErrorDetail } | null)?.detail;
+    if (Array.isArray(detail)) {
+      const fields: Record<string, string> = {};
+      for (const item of detail) {
+        const field = String(item.loc?.[item.loc.length - 1] ?? "body");
+        fields[field] = (item.msg ?? "Invalid value.").replace(/^Value error, /, "");
+      }
+      throw new ApiError(Object.values(fields)[0] ?? "Invalid input.", response.status, fields);
     }
-    throw new ApiError("http_error", `Request failed with status ${response.status}`, response.status);
+    const message = typeof detail === "string" ? detail : `Request failed with status ${response.status}`;
+    throw new ApiError(message, response.status);
   }
 
   return data as T;
@@ -71,15 +71,15 @@ export const api = {
 
   getPlots: () => request<PlotSummary[]>("/api/plots"),
 
-  createPlot: (data: PlotCreateInput) =>
+  createPlot: (data: PlotRequest) =>
     request<PlotSummary>("/api/plots", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
-  updatePlot: (plotId: number, data: PlotUpdateInput) =>
+  updatePlot: (plotId: number, data: PlotRequest) =>
     request<PlotSummary>(`/api/plots/${plotId}`, {
-      method: "PATCH",
+      method: "PUT",
       body: JSON.stringify(data),
     }),
 
@@ -88,11 +88,10 @@ export const api = {
       method: "DELETE",
     }),
 
-  getPlotRisk: (plotId: number) => request<PlotRiskResponse>(`/api/plots/${plotId}/risk`),
+  getAssessment: (plotId: number) => request<AssessmentResponse>(`/api/plots/${plotId}/assessment`),
 
-  // Inside the 10-minute cooldown this returns the cached assessment with refreshed: false.
-  refreshPlotRisk: (plotId: number) =>
-    request<PlotRiskResponse>(`/api/plots/${plotId}/risk/refresh`, {
+  refreshAssessment: (plotId: number) =>
+    request<AssessmentResponse>(`/api/plots/${plotId}/assessment/refresh`, {
       method: "POST",
     }),
 };

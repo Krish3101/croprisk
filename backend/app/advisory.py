@@ -11,13 +11,13 @@ from typing import NamedTuple
 
 import httpx
 
+from app.catalogue import CropConfig, StageConfig
 from app.config import settings
-from app.domain.catalogue import CropConfig, StageConfig
-from app.domain.engine import (
+from app.engine import (
     DISEASE_MIN_RUN_HOURS,
     AssessmentResult,
+    Hazard,
     Severity,
-    Threat,
     WeatherDigest,
 )
 from app.schemas import Action, Advisory, AdvisoryResponse
@@ -26,7 +26,7 @@ logger = logging.getLogger("croprisk")
 
 SYSTEM_PROMPT = """You are CropRisk's agronomic advisor. You write short, practical guidance for smallholder farmers.
 
-1. GROUND TRUTH: the risk score, severity band and primary threat you are given are already calculated and correct. Never recalculate or dispute them.
+1. GROUND TRUTH: the risk score, severity band and primary hazard you are given are already calculated and correct. Never recalculate or dispute them.
 2. STAGE SPECIFICITY: explain the damage mechanism for the exact crop and growth stage given.
 3. NO CHEMICAL PRESCRIPTIONS: never name a pesticide, herbicide or fungicide, and never give a dose. Recommend cultural, mechanical, irrigation or biological measures, or advise consulting the local extension officer.
 4. ACTIONABLE: assume hand tools, furrow or sprinkler irrigation, family labour.
@@ -67,32 +67,32 @@ class HazardText(NamedTuple):
 
 
 FALLBACK_TABLE = {
-    Threat.HEAT: HazardText(
+    Hazard.HEAT: HazardText(
         "Heat stress", "peak temperature", lambda d: d.peak_temp_c,
         lambda c, s: s.t_crit_heat, "the threshold for this stage", " °C",
         "Irrigate lightly in the evening if water is available, to cool the crop.",
         "Check the crop after the hottest day for scorched or wilted leaves.",
     ),
-    Threat.FROST: HazardText(
+    Hazard.FROST: HazardText(
         "Frost", "lowest temperature", lambda d: d.min_temp_c,
         lambda c, s: s.t_crit_frost, "the threshold for this stage", " °C",
         "Irrigate in the afternoon before the coldest night; moist soil holds more heat.",
         "Check young growth for frost damage after the coldest night.",
     ),
-    Threat.PRECIP: HazardText(
+    Hazard.PRECIP: HazardText(
         "Heavy rain", "five-day rain total", lambda d: d.total_rain_mm,
         # The digest has no wettest-24h figure, so say the two numbers cover different windows.
         lambda c, s: s.r_crit_24h, "this stage's limit, which applies to any single 24 h", " mm",
         "Clear drains and field outlets before the heaviest rain.",
         "Walk the low spots after the rain and drain any standing water.",
     ),
-    Threat.WIND: HazardText(
+    Hazard.WIND: HazardText(
         "Strong wind", "strongest wind", lambda d: d.max_wind_kmh,
         lambda c, s: s.w_crit_lodge, "this stage's lodging limit", " km/h",
         "Postpone spraying and other field work during the windiest period.",
         "Check for flattened or broken plants after the strong winds.",
     ),
-    Threat.DISEASE: HazardText(
+    Hazard.DISEASE: HazardText(
         "Fungal disease", "longest humid spell", lambda d: d.longest_disease_window_h,
         lambda c, s: DISEASE_MIN_RUN_HOURS, "disease risk starts after", " h",
         "Avoid evening irrigation while the air stays humid.",
@@ -105,7 +105,7 @@ def build_fallback_advisory(
     crop: CropConfig, stage: StageConfig, result: AssessmentResult, digest: WeatherDigest
 ) -> Advisory:
     """Explain the score using only the engine's numbers and this stage's thresholds."""
-    row = FALLBACK_TABLE.get(Threat(result.primary_threat))
+    row = FALLBACK_TABLE.get(Hazard(result.primary_hazard))
     if row is None:
         return BYPASS_ADVISORY
     value, limit = row.value(digest), row.limit(crop, stage)
@@ -177,7 +177,7 @@ def build_advisory(
             "assessment": {
                 "score": result.score,
                 "severity": result.severity,
-                "primary_threat": result.primary_threat,
+                "primary_hazard": result.primary_hazard,
                 "hazard_indices": {k: round(v, 1) for k, v in result.hazard_indices.items()},
             },
             "weather_digest": asdict(digest),

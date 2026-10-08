@@ -3,7 +3,7 @@
 import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # Advisory (also the shape the LLM must reply with)
 
@@ -56,7 +56,8 @@ class GeocodeCandidate(BaseModel):
 
 
 # Plots Request / Response Models
-class PlotCreateRequest(BaseModel):
+# The same body adds a plot (POST) and replaces one (PUT)
+class PlotRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     name: str = Field(..., min_length=1, max_length=100)
@@ -85,45 +86,6 @@ class PlotCreateRequest(BaseModel):
         return v
 
 
-class PlotUpdateRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    name: str | None = Field(default=None, min_length=1, max_length=100)
-    crop_id: str | None = Field(default=None, min_length=1, max_length=50)
-    stage_id: str | None = Field(default=None, min_length=1, max_length=100)
-    location_name: str | None = Field(default=None, min_length=1, max_length=200)
-    latitude: float | None = Field(default=None, ge=-90.0, le=90.0)
-    longitude: float | None = Field(default=None, ge=-180.0, le=180.0)
-    sowing_date: datetime.date | None = None
-
-    @field_validator("name")
-    @classmethod
-    def validate_name_not_blank(cls, v: str | None) -> str | None:
-        if v is not None and (not v or not v.strip()):
-            raise ValueError("Field name cannot be empty or whitespace only.")
-        return v.strip() if v is not None else None
-
-    @field_validator("sowing_date")
-    @classmethod
-    def validate_sowing_date(cls, v: datetime.date | None) -> datetime.date | None:
-        if v is None:
-            return v
-        today = datetime.date.today()
-        if v > today:
-            raise ValueError("Sowing date cannot be in the future.")
-        if (today - v).days > 400:
-            raise ValueError("Sowing date cannot be more than 400 days in the past.")
-        return v
-
-    @model_validator(mode="after")
-    def reject_nulls(self) -> "PlotUpdateRequest":
-        # Fields can be left out, but not sent as null.
-        for name in self.model_fields_set:
-            if getattr(self, name) is None:
-                raise ValueError(f"{name} cannot be null.")
-        return self
-
-
 # Dashboard Plot Summary
 class CropRef(BaseModel):
     id: str
@@ -136,12 +98,11 @@ class StageRef(BaseModel):
     bbch: str
 
 
-class LatestRiskSummary(BaseModel):
+class LatestAssessment(BaseModel):
     score: int
     severity: str
-    primary_threat: str
-    created_at: str
-    is_stale: bool
+    primary_hazard: str
+    created_at: datetime.datetime
 
 
 class PlotSummary(BaseModel):
@@ -154,7 +115,7 @@ class PlotSummary(BaseModel):
     longitude: float
     sowing_date: str
     days_after_sowing: int
-    latest_risk: LatestRiskSummary | None = None
+    latest_assessment: LatestAssessment | None = None
 
 
 # Detailed Plot Risk Evaluation Response
@@ -174,14 +135,13 @@ class PlotDetailInfo(BaseModel):
     days_after_sowing: int
 
 
-class RiskDetail(BaseModel):
+class AssessmentDetail(BaseModel):
     score: int
     severity: str
-    primary_threat: str
+    primary_hazard: str
     hazard_indices: dict[str, float]
-    created_at: str
-    is_stale: bool
-    forecast_fetched_at: str
+    created_at: datetime.datetime
+    forecast_fetched_at: datetime.datetime
 
 
 class IntervalItem(BaseModel):
@@ -197,19 +157,8 @@ class WeatherSection(BaseModel):
     intervals: list[IntervalItem]
 
 
-class PlotRiskResponse(BaseModel):
+class AssessmentResponse(BaseModel):
     plot: PlotDetailInfo
-    risk: RiskDetail
+    assessment: AssessmentDetail
     advisory: AdvisoryResponse
     weather: WeatherSection
-    refreshed: bool = False
-
-
-# Health check response
-class HealthResponse(BaseModel):
-    status: str
-    db: bool
-    weather_key: bool
-    llm_key: bool
-    catalogue_version: str
-    schema_version: int

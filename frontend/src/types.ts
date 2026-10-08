@@ -1,6 +1,6 @@
 export type SeverityBand = "LOW" | "MODERATE" | "HIGH";
 export type AdvisorySource = "bypass" | "llm" | "fallback";
-export type Threat =
+export type Hazard =
   | "Extreme Heat"
   | "Frost Damage"
   | "Excess Precipitation"
@@ -33,12 +33,11 @@ export interface GeocodeCandidate {
   longitude: number;
 }
 
-export interface LatestRiskSummary {
+export interface LatestAssessment {
   score: number;
   severity: SeverityBand;
-  primary_threat: Threat | string;
+  primary_hazard: Hazard | string;
   created_at: string;
-  is_stale: boolean;
 }
 
 export interface PlotSummary {
@@ -58,10 +57,11 @@ export interface PlotSummary {
   longitude: number;
   sowing_date: string;
   days_after_sowing: number;
-  latest_risk: LatestRiskSummary | null;
+  latest_assessment: LatestAssessment | null;
 }
 
-export interface PlotCreateInput {
+// Mirrors PlotRequest: the body for adding a plot and for replacing one
+export interface PlotRequest {
   name: string;
   crop_id: string;
   stage_id: string;
@@ -69,16 +69,6 @@ export interface PlotCreateInput {
   latitude: number;
   longitude: number;
   sowing_date: string;
-}
-
-export interface PlotUpdateInput {
-  name?: string;
-  crop_id?: string;
-  stage_id?: string;
-  location_name?: string;
-  latitude?: number;
-  longitude?: number;
-  sowing_date?: string;
 }
 
 export interface ActionItem {
@@ -127,10 +117,10 @@ export interface PlotDetailInfo {
   days_after_sowing: number;
 }
 
-export interface RiskDetailInfo {
+export interface AssessmentDetail {
   score: number;
   severity: SeverityBand;
-  primary_threat: Threat | string;
+  primary_hazard: Hazard | string;
   hazard_indices: {
     heat: number;
     frost: number;
@@ -139,26 +129,17 @@ export interface RiskDetailInfo {
     wind: number;
   };
   created_at: string;
-  is_stale: boolean;
   forecast_fetched_at: string;
 }
 
-export interface PlotRiskResponse {
+export interface AssessmentResponse {
   plot: PlotDetailInfo;
-  risk: RiskDetailInfo;
+  assessment: AssessmentDetail;
   advisory: AdvisoryData;
   weather: {
     digest: WeatherDigest;
     intervals: ForecastInterval[];
   };
   // True when this response fetched a new forecast.
-  refreshed: boolean;
 }
 
-export interface ApiErrorEnvelope {
-  error: {
-    code: string;
-    message: string;
-    fields?: Record<string, string>;
-  };
-}

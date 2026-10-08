@@ -3,8 +3,8 @@
 import datetime
 
 from sqlalchemy import (
-    CheckConstraint,
     Date,
+    DateTime,
     Float,
     ForeignKey,
     Integer,
@@ -18,12 +18,6 @@ from app.db import Base
 
 class Plot(Base):
     __tablename__ = "plots"
-    __table_args__ = (
-        CheckConstraint("length(trim(name)) > 0", name="chk_plots_name_not_empty"),
-        CheckConstraint("latitude BETWEEN -90 AND 90", name="chk_plots_latitude"),
-        CheckConstraint("longitude BETWEEN -180 AND 180", name="chk_plots_longitude"),
-    )
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     crop_id: Mapped[str] = mapped_column(String, nullable=False)
@@ -32,31 +26,19 @@ class Plot(Base):
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
     sowing_date: Mapped[datetime.date] = mapped_column(Date, nullable=False)
-    created_at: Mapped[str] = mapped_column(Text, nullable=False)
-    updated_at: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
 
-    risk_assessment: Mapped["RiskAssessment | None"] = relationship(
-        "RiskAssessment",
+    assessment: Mapped["Assessment | None"] = relationship(
+        "Assessment",
         back_populates="plot",
         cascade="all, delete-orphan",
         uselist=False,
     )
 
 
-class RiskAssessment(Base):
-    __tablename__ = "risk_assessments"
-    __table_args__ = (
-        CheckConstraint("score BETWEEN 0 AND 100", name="chk_risk_score"),
-        CheckConstraint(
-            "severity IN ('LOW', 'MODERATE', 'HIGH')",
-            name="chk_risk_severity",
-        ),
-        CheckConstraint(
-            "advisory_source IN ('bypass', 'llm', 'fallback')",
-            name="chk_risk_advisory_source",
-        ),
-    )
-
+class Assessment(Base):
+    __tablename__ = "assessments"
     plot_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("plots.id", ondelete="CASCADE"),
@@ -65,15 +47,14 @@ class RiskAssessment(Base):
     # The inputs this row was scored with, compared against the plot to decide if it is still valid.
     location_key: Mapped[str] = mapped_column(String, nullable=False)
     stage_id: Mapped[str] = mapped_column(String, nullable=False)
-    catalogue_version: Mapped[str] = mapped_column(String, nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     severity: Mapped[str] = mapped_column(String, nullable=False)
-    primary_threat: Mapped[str] = mapped_column(String, nullable=False)
+    primary_hazard: Mapped[str] = mapped_column(String, nullable=False)
     hazard_indices: Mapped[str] = mapped_column(Text, nullable=False)  # JSON
     forecast: Mapped[str] = mapped_column(Text, nullable=False)  # JSON normalised intervals
-    forecast_fetched_at: Mapped[str] = mapped_column(Text, nullable=False)
+    forecast_fetched_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
     advisory: Mapped[str] = mapped_column(Text, nullable=False)  # JSON Advisory
     advisory_source: Mapped[str] = mapped_column(String, nullable=False)
-    created_at: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
 
-    plot: Mapped["Plot"] = relationship("Plot", back_populates="risk_assessment")
+    plot: Mapped["Plot"] = relationship("Plot", back_populates="assessment")

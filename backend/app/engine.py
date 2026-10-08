@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 from enum import StrEnum
 
-from app.domain.catalogue import CropConfig, StageConfig
+from app.catalogue import CropConfig, StageConfig
 
 INTERVAL_HOURS: int = 3
 INTERVALS_PER_24H: int = 8  # 24 hours / 3 hours per interval
@@ -20,7 +20,7 @@ SEVERITY_LOW_MAX: int = 29
 SEVERITY_MODERATE_MAX: int = 65
 
 
-class Threat(StrEnum):
+class Hazard(StrEnum):
     NONE = "None"
     FROST = "Frost Damage"
     HEAT = "Extreme Heat"
@@ -62,7 +62,7 @@ class WeatherDigest:
 class AssessmentResult:
     score: int
     severity: str
-    primary_threat: str
+    primary_hazard: str
     hazard_indices: dict[str, float]
 
 
@@ -121,7 +121,7 @@ def compute_digest(
     )
 
 
-def evaluate(
+def score_forecast(
     intervals: list[ForecastInterval],
     stage: StageConfig,
     crop: CropConfig,
@@ -176,7 +176,7 @@ def evaluate(
     max_w = max(i.wind_kmh for i in intervals)
     i_wind = _clamp01((max_w - stage.w_crit_lodge) / (stage.w_severe - stage.w_crit_lodge)) * 100.0
 
-    # Score, Severity, Primary Threat
+    # Score, Severity, Primary Hazard
     w_heat, w_frost, w_precip, w_disease, w_wind = stage.weights
     c_heat = w_heat * i_heat
     c_frost = w_frost * i_frost
@@ -200,21 +200,21 @@ def evaluate(
 
     # Biological tie-break order: Frost (5) > Heat (4) > Precip (3) > Wind (2) > Disease (1)
     if max_c == 0.0:
-        primary_threat = Threat.NONE.value
+        primary_hazard = Hazard.NONE.value
     else:
         candidates = [
-            (c_frost, 5, Threat.FROST.value),
-            (c_heat, 4, Threat.HEAT.value),
-            (c_precip, 3, Threat.PRECIP.value),
-            (c_wind, 2, Threat.WIND.value),
-            (c_disease, 1, Threat.DISEASE.value),
+            (c_frost, 5, Hazard.FROST.value),
+            (c_heat, 4, Hazard.HEAT.value),
+            (c_precip, 3, Hazard.PRECIP.value),
+            (c_wind, 2, Hazard.WIND.value),
+            (c_disease, 1, Hazard.DISEASE.value),
         ]
-        _, _, primary_threat = max(candidates, key=lambda item: (item[0], item[1]))
+        _, _, primary_hazard = max(candidates, key=lambda item: (item[0], item[1]))
 
     return AssessmentResult(
         score=score,
         severity=severity,
-        primary_threat=primary_threat,
+        primary_hazard=primary_hazard,
         hazard_indices={
             "heat": i_heat,
             "frost": i_frost,

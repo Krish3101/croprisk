@@ -8,10 +8,10 @@ interface PlotCardProps {
 }
 
 export const PlotCard: React.FC<PlotCardProps> = ({ plot }) => {
-  const displayThreat = () => {
-    if (!plot.latest_risk) return "Open to run first assessment";
-    if (plot.latest_risk.primary_threat === "None") return "No significant hazard";
-    return plot.latest_risk.primary_threat;
+  const displayHazard = () => {
+    if (!plot.latest_assessment) return "Open to run first assessment";
+    if (plot.latest_assessment.primary_hazard === "None") return "No significant hazard";
+    return plot.latest_assessment.primary_hazard;
   };
 
   return (
@@ -29,10 +29,10 @@ export const PlotCard: React.FC<PlotCardProps> = ({ plot }) => {
           </p>
         </div>
         <div className="shrink-0">
-          {plot.latest_risk ? (
+          {plot.latest_assessment ? (
             <ScoreBadge
-              score={plot.latest_risk.score}
-              severity={plot.latest_risk.severity}
+              score={plot.latest_assessment.score}
+              severity={plot.latest_assessment.severity}
               size="sm"
             />
           ) : (
@@ -57,9 +57,9 @@ export const PlotCard: React.FC<PlotCardProps> = ({ plot }) => {
           </span>
         </div>
         <div className="flex justify-between gap-2">
-          <span className="text-stone-500 shrink-0">Primary Threat:</span>
+          <span className="text-stone-500 shrink-0">Primary Hazard:</span>
           <span className="font-semibold text-stone-900 truncate">
-            {displayThreat()}
+            {displayHazard()}
           </span>
         </div>
       </div>

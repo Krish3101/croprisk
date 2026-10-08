@@ -76,7 +76,7 @@ export const Advisory: React.FC<AdvisoryProps> = ({ advisory }) => {
 
       <div className="bg-amber-50/60 p-3.5 rounded-md border border-amber-200/60">
         <h3 className="text-xs font-semibold text-amber-900 uppercase tracking-wider mb-0.5">
-          Field Monitoring Focus
+          What to watch
         </h3>
         <p className="text-xs sm:text-sm text-amber-950 font-medium">
           {advisory.monitoring_focus}
