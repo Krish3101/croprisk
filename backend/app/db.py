@@ -1,17 +1,11 @@
-"""SQLite engine, sessions and the schema version check."""
+"""SQLite engine and sessions."""
 
-import logging
 from collections.abc import Generator
 
-from sqlalchemy import Engine, create_engine, event, text
+from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import settings
-
-logger = logging.getLogger("croprisk")
-
-# Bump this whenever a model changes. Old databases are not migrated: start.sh --reset.
-SCHEMA_VERSION = 3
 
 
 def make_engine(url: str) -> Engine:
@@ -46,20 +40,5 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db(engine_obj: Engine) -> None:
-    """Create the tables on an empty database, or refuse to start on an old one."""
-    with engine_obj.begin() as conn:
-        version = conn.execute(text("PRAGMA user_version")).scalar()
-        if version == SCHEMA_VERSION:
-            return
-
-        table_count = conn.execute(
-            text("SELECT count(*) FROM sqlite_master WHERE type='table'")
-        ).scalar()
-        if version != 0 or table_count:
-            raise RuntimeError(
-                f"schema v{version} found, expected {SCHEMA_VERSION}: run ./scripts/start.sh --reset"
-            )
-
-        Base.metadata.create_all(conn)
-        conn.execute(text(f"PRAGMA user_version = {SCHEMA_VERSION}"))
-        logger.info("Created a new database at schema v%s.", SCHEMA_VERSION)
+    """Create any missing tables."""
+    Base.metadata.create_all(engine_obj)

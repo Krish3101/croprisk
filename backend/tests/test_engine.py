@@ -3,16 +3,15 @@ from datetime import UTC, timedelta
 
 import pytest
 
-from app.domain.catalogue import StageConfig
-from app.domain.engine import (
+from app.catalogue import StageConfig, get_crop, get_stage
+from app.engine import (
     ForecastInterval,
+    Hazard,
     InsufficientForecast,
     Severity,
-    Threat,
     compute_digest,
-    evaluate,
+    score_forecast,
 )
-from app.services.catalogue_loader import get_crop, get_stage
 
 
 def make_constant_forecast(
@@ -37,17 +36,17 @@ def make_constant_forecast(
     ]
 
 
-# Golden vectors: worked derivations in docs/engine.md
+# Golden vectors: ten worked examples, each scored by hand
 def test_golden_vector_1():
     """wheat.anthesis, T=38, RH=40, Wind=5, Rain=0 -> Score=100, HIGH, Extreme Heat."""
     stage = get_stage("wheat", "wheat.anthesis")
     crop = get_crop("wheat")
     intervals = make_constant_forecast(38.0, 40.0, 5.0, 0.0)
-    result = evaluate(intervals, stage, crop)
+    result = score_forecast(intervals, stage, crop)
 
     assert result.score == 100
     assert result.severity == Severity.HIGH.value
-    assert result.primary_threat == Threat.HEAT.value
+    assert result.primary_hazard == Hazard.HEAT.value
     assert round(result.hazard_indices["heat"], 1) == 100.0
     assert round(result.hazard_indices["frost"], 1) == 0.0
     assert round(result.hazard_indices["precip"], 1) == 0.0
@@ -60,11 +59,11 @@ def test_golden_vector_2():
     stage = get_stage("wheat", "wheat.anthesis")
     crop = get_crop("wheat")
     intervals = make_constant_forecast(-1.0, 50.0, 10.0, 0.0)
-    result = evaluate(intervals, stage, crop)
+    result = score_forecast(intervals, stage, crop)
 
     assert result.score == 57
     assert result.severity == Severity.MODERATE.value
-    assert result.primary_threat == Threat.FROST.value
+    assert result.primary_hazard == Hazard.FROST.value
     assert round(result.hazard_indices["frost"], 1) == 66.7
     assert round(result.hazard_indices["heat"], 1) == 0.0
 
@@ -74,11 +73,11 @@ def test_golden_vector_3():
     stage = get_stage("rice", "rice.tillering")
     crop = get_crop("rice")
     intervals = make_constant_forecast(27.0, 90.0, 10.0, 0.0)
-    result = evaluate(intervals, stage, crop)
+    result = score_forecast(intervals, stage, crop)
 
     assert result.score == 100
     assert result.severity == Severity.HIGH.value
-    assert result.primary_threat == Threat.DISEASE.value
+    assert result.primary_hazard == Hazard.DISEASE.value
     assert round(result.hazard_indices["disease"], 1) == 100.0
 
 
@@ -87,11 +86,11 @@ def test_golden_vector_4():
     stage = get_stage("wheat", "wheat.anthesis")
     crop = get_crop("wheat")
     intervals = make_constant_forecast(20.0, 50.0, 10.0, 0.0)
-    result = evaluate(intervals, stage, crop)
+    result = score_forecast(intervals, stage, crop)
 
     assert result.score == 0
     assert result.severity == Severity.LOW.value
-    assert result.primary_threat == Threat.NONE.value
+    assert result.primary_hazard == Hazard.NONE.value
     for idx_val in result.hazard_indices.values():
         assert round(idx_val, 1) == 0.0
 
@@ -101,11 +100,11 @@ def test_golden_vector_5():
     stage = get_stage("wheat", "wheat.ripening")
     crop = get_crop("wheat")
     intervals = make_constant_forecast(38.0, 40.0, 5.0, 0.0)
-    result = evaluate(intervals, stage, crop)
+    result = score_forecast(intervals, stage, crop)
 
     assert result.score == 17
     assert result.severity == Severity.LOW.value
-    assert result.primary_threat == Threat.HEAT.value
+    assert result.primary_hazard == Hazard.HEAT.value
     assert round(result.hazard_indices["heat"], 1) == 60.0
 
 
@@ -120,11 +119,11 @@ def test_golden_vector_6():
     stage = get_stage("cotton", "cotton.harvest")
     crop = get_crop("cotton")
     intervals = make_constant_forecast(25.0, 90.0, 55.0, 3.75)
-    result = evaluate(intervals, stage, crop)
+    result = score_forecast(intervals, stage, crop)
 
     assert result.score == 65
     assert result.severity == Severity.MODERATE.value
-    assert result.primary_threat == Threat.PRECIP.value
+    assert result.primary_hazard == Hazard.PRECIP.value
     assert round(result.hazard_indices["precip"], 1) == 50.0
     assert round(result.hazard_indices["disease"], 1) == 100.0
     assert round(result.hazard_indices["wind"], 1) == 100.0
@@ -163,11 +162,11 @@ def test_golden_vector_7_rolling_24h_rain_burst():
             )
         )
 
-    result = evaluate(intervals, stage, crop)
+    result = score_forecast(intervals, stage, crop)
     assert round(result.hazard_indices["precip"], 1) == 52.5
     assert result.score == 23
     assert result.severity == Severity.LOW.value
-    assert result.primary_threat == Threat.PRECIP.value
+    assert result.primary_hazard == Hazard.PRECIP.value
 
 
 def test_golden_vector_8_longest_humidity_run():
@@ -201,11 +200,11 @@ def test_golden_vector_8_longest_humidity_run():
             )
         )
 
-    result = evaluate(intervals, stage, crop)
+    result = score_forecast(intervals, stage, crop)
     assert round(result.hazard_indices["disease"], 1) == 47.5
     assert result.score == 20
     assert result.severity == Severity.LOW.value
-    assert result.primary_threat == Threat.DISEASE.value
+    assert result.primary_hazard == Hazard.DISEASE.value
 
 
 def test_golden_vector_9_diurnal_heat_accumulation():
@@ -240,11 +239,11 @@ def test_golden_vector_9_diurnal_heat_accumulation():
             )
         )
 
-    result = evaluate(intervals, stage, crop)
+    result = score_forecast(intervals, stage, crop)
     assert round(result.hazard_indices["heat"], 1) == 48.0
     assert result.score == 48
     assert result.severity == Severity.MODERATE.value
-    assert result.primary_threat == Threat.HEAT.value
+    assert result.primary_hazard == Hazard.HEAT.value
 
 
 def test_golden_vector_10_boundary_pinning_29():
@@ -267,17 +266,17 @@ def test_golden_vector_10_boundary_pinning_29():
         wind_kmh=10.0,
         rain_mm=0.0,
     )
-    result = evaluate(intervals, stage, crop)
+    result = score_forecast(intervals, stage, crop)
     assert result.score == 29
     assert result.severity == Severity.LOW.value
-    assert result.primary_threat == Threat.FROST.value
+    assert result.primary_hazard == Hazard.FROST.value
 
 
 def test_empty_intervals_raises():
     stage = get_stage("wheat", "wheat.anthesis")
     crop = get_crop("wheat")
     with pytest.raises(InsufficientForecast):
-        evaluate([], stage, crop)
+        score_forecast([], stage, crop)
     with pytest.raises(InsufficientForecast):
         compute_digest([], crop)
 
@@ -285,29 +284,29 @@ def test_empty_intervals_raises():
 def test_hazard_heat_thresholds():
     stage = get_stage("wheat", "wheat.anthesis")
     crop = get_crop("wheat")
-    res_below = evaluate(make_constant_forecast(25.0, 40.0, 5.0, 0.0), stage, crop)
+    res_below = score_forecast(make_constant_forecast(25.0, 40.0, 5.0, 0.0), stage, crop)
     assert res_below.hazard_indices["heat"] == 0.0
 
     intervals = [ForecastInterval("t0", 30.5, 40.0, 5.0, 0.0)] + [
         ForecastInterval(f"t{i}", 20.0, 40.0, 5.0, 0.0) for i in range(1, 40)
     ]
-    res_mid = evaluate(intervals, stage, crop)
+    res_mid = score_forecast(intervals, stage, crop)
     assert 0.0 < res_mid.hazard_indices["heat"] < 100.0
 
-    res_lethal = evaluate(make_constant_forecast(35.0, 40.0, 5.0, 0.0), stage, crop)
+    res_lethal = score_forecast(make_constant_forecast(35.0, 40.0, 5.0, 0.0), stage, crop)
     assert res_lethal.hazard_indices["heat"] == 100.0
 
 
 def test_hazard_frost_thresholds():
     stage = get_stage("wheat", "wheat.anthesis")
     crop = get_crop("wheat")
-    res_above = evaluate(make_constant_forecast(5.0, 40.0, 5.0, 0.0), stage, crop)
+    res_above = score_forecast(make_constant_forecast(5.0, 40.0, 5.0, 0.0), stage, crop)
     assert res_above.hazard_indices["frost"] == 0.0
 
-    res_mid = evaluate(make_constant_forecast(0.0, 40.0, 5.0, 0.0), stage, crop)
+    res_mid = score_forecast(make_constant_forecast(0.0, 40.0, 5.0, 0.0), stage, crop)
     assert round(res_mid.hazard_indices["frost"], 1) == 33.3
 
-    res_lethal = evaluate(make_constant_forecast(-3.0, 40.0, 5.0, 0.0), stage, crop)
+    res_lethal = score_forecast(make_constant_forecast(-3.0, 40.0, 5.0, 0.0), stage, crop)
     assert res_lethal.hazard_indices["frost"] == 100.0
 
 
@@ -315,20 +314,20 @@ def test_hazard_precip_fewer_than_8_blocks():
     stage = get_stage("wheat", "wheat.anthesis")
     crop = get_crop("wheat")
     intervals = [ForecastInterval(f"t{i}", 20.0, 40.0, 5.0, 10.0) for i in range(5)]
-    res = evaluate(intervals, stage, crop)
+    res = score_forecast(intervals, stage, crop)
     assert round(res.hazard_indices["precip"], 1) == 37.5
 
 
 def test_hazard_wind_thresholds():
     stage = get_stage("wheat", "wheat.anthesis")
     crop = get_crop("wheat")
-    res_below = evaluate(make_constant_forecast(20.0, 40.0, 30.0, 0.0), stage, crop)
+    res_below = score_forecast(make_constant_forecast(20.0, 40.0, 30.0, 0.0), stage, crop)
     assert res_below.hazard_indices["wind"] == 0.0
 
-    res_mid = evaluate(make_constant_forecast(20.0, 40.0, 52.5, 0.0), stage, crop)
+    res_mid = score_forecast(make_constant_forecast(20.0, 40.0, 52.5, 0.0), stage, crop)
     assert round(res_mid.hazard_indices["wind"], 1) == 50.0
 
-    res_high = evaluate(make_constant_forecast(20.0, 40.0, 70.0, 0.0), stage, crop)
+    res_high = score_forecast(make_constant_forecast(20.0, 40.0, 70.0, 0.0), stage, crop)
     assert res_high.hazard_indices["wind"] == 100.0
 
 
@@ -353,8 +352,8 @@ def test_tie_break_biological_order():
         ForecastInterval("t0", 40.0, 40.0, 10.0, 0.0),
         ForecastInterval("t1", -5.0, 40.0, 10.0, 0.0),
     ] + [ForecastInterval(f"t{i}", 20.0, 40.0, 10.0, 0.0) for i in range(2, 40)]
-    res = evaluate(intervals, stage_tie_frost_heat, get_crop("wheat"))
-    assert res.primary_threat == Threat.FROST.value
+    res = score_forecast(intervals, stage_tie_frost_heat, get_crop("wheat"))
+    assert res.primary_hazard == Hazard.FROST.value
 
 
 def test_weather_digest_computation():

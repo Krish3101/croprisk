@@ -4,10 +4,10 @@ import datetime
 import logging
 
 import httpx
+from fastapi import HTTPException
 
 from app.config import settings
-from app.domain.engine import ForecastInterval, InsufficientForecast
-from app.errors import UpstreamUnavailableError
+from app.engine import ForecastInterval, InsufficientForecast
 
 logger = logging.getLogger("croprisk")
 
@@ -15,30 +15,22 @@ CADENCE_SECONDS = 3 * 3600
 MIN_INTERVALS = 8  # 24 h of data
 
 
+UNAVAILABLE = "Weather service unavailable."
+
+
 def _get_json(url: str, params: dict):
-    """GET an OpenWeather endpoint. Every failure becomes UpstreamUnavailableError (503)."""
+    """GET an OpenWeather endpoint. Any failure becomes a 503."""
     if not settings.OPENWEATHER_API_KEY:
-        raise UpstreamUnavailableError("Weather service API key is not configured.")
+        raise HTTPException(503, UNAVAILABLE)
     try:
         with httpx.Client(timeout=5.0) as client:
             resp = client.get(url, params={**params, "appid": settings.OPENWEATHER_API_KEY})
-    except httpx.HTTPError as exc:
-        # str(exc) can include the URL, which has the key in it, so log the type only.
-        logger.warning("OpenWeather request failed: %s", type(exc).__name__)
-        raise UpstreamUnavailableError("Weather service timed out or failed.") from None
-
-    if resp.status_code == 401:
-        logger.warning("OPENWEATHER_API_KEY rejected by OpenWeather (HTTP 401).")
-        raise UpstreamUnavailableError("Weather service authentication rejected.")
-    if resp.status_code == 429:
-        logger.warning("OpenWeather rate limited (HTTP 429).")
-        raise UpstreamUnavailableError("Weather service rate limit exceeded.")
-    if resp.status_code != 200:
-        raise UpstreamUnavailableError(f"Weather service returned status {resp.status_code}.")
-    try:
+        resp.raise_for_status()
         return resp.json()
-    except ValueError:
-        raise UpstreamUnavailableError("Weather service returned malformed JSON.") from None
+    except (httpx.HTTPError, ValueError) as exc:
+        # str(exc) can include the URL, which has the key in it, so log the type only
+        logger.warning("OpenWeather request failed: %s", type(exc).__name__)
+        raise HTTPException(503, UNAVAILABLE) from None
 
 
 def geocode(query: str) -> list[dict]:
@@ -48,7 +40,7 @@ def geocode(query: str) -> list[dict]:
         return []
     items = _get_json("https://api.openweathermap.org/geo/1.0/direct", {"q": query, "limit": 5})
     if not isinstance(items, list):
-        raise UpstreamUnavailableError("Geocoding returned an unexpected response.")
+        raise HTTPException(503, UNAVAILABLE)
 
     results: list[dict] = []
     seen: set[tuple[float, float]] = set()
@@ -122,7 +114,7 @@ def fetch_forecast(latitude: float, longitude: float) -> list[ForecastInterval]:
     )
     entries = data.get("list") if isinstance(data, dict) else None
     if not isinstance(entries, list):
-        raise UpstreamUnavailableError("Forecast returned an unexpected response.")
+        raise HTTPException(503, UNAVAILABLE)
 
     parsed = sorted((p for p in map(_parse_entry, entries) if p is not None), key=lambda p: p[0])
     run: list[ForecastInterval] = []

@@ -11,7 +11,7 @@ os.environ["OPENROUTER_API_KEY"] = ""
 TEST_DB = Path(tempfile.mkdtemp()) / "test.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB}"
 
-from app.domain.engine import ForecastInterval  # noqa: E402
+from app.engine import ForecastInterval  # noqa: E402
 
 
 def make_intervals(

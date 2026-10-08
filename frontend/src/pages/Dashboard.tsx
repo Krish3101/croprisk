@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
-import { PlotCreateInput } from "../types";
+import { PlotRequest } from "../types";
 import { PlotCard } from "../components/PlotCard";
 import { PlotDialog } from "../components/PlotDialog";
 
@@ -25,15 +25,15 @@ export const Dashboard: React.FC = () => {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: PlotCreateInput) => api.createPlot(data),
+    mutationFn: (data: PlotRequest) => api.createPlot(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plots"] });
     },
   });
 
-  const highRiskCount = plots.filter((p) => p.latest_risk?.severity === "HIGH").length;
-  const modRiskCount = plots.filter((p) => p.latest_risk?.severity === "MODERATE").length;
-  const lowRiskCount = plots.filter((p) => p.latest_risk?.severity === "LOW").length;
+  const highRiskCount = plots.filter((p) => p.latest_assessment?.severity === "HIGH").length;
+  const modRiskCount = plots.filter((p) => p.latest_assessment?.severity === "MODERATE").length;
+  const lowRiskCount = plots.filter((p) => p.latest_assessment?.severity === "LOW").length;
 
   if (plotsLoading) {
     return (
@@ -64,7 +64,7 @@ export const Dashboard: React.FC = () => {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-stone-900">Your fields</h1>
+            <h1 className="text-2xl font-black text-stone-900">Your plots</h1>
             <p className="text-sm text-stone-600 mt-1 max-w-2xl">
               Same weather, different risk: heat, frost, rain, fungal and wind hazards scored per
               crop and growth stage. Next five days, most urgent first.
@@ -75,14 +75,14 @@ export const Dashboard: React.FC = () => {
             onClick={() => setIsDialogOpen(true)}
             className="self-start sm:self-auto inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold rounded-lg shadow-sm transition"
           >
-            + Add field
+            + Add plot
           </button>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white p-4 rounded-lg border border-stone-200 shadow-sm">
             <span className="text-xs font-semibold text-stone-600 uppercase tracking-wide">
-              Total Fields
+              Total plots
             </span>
             <p className="text-2xl font-black text-stone-900 mt-1 tabular-nums">
               {plots.length}
@@ -119,7 +119,7 @@ export const Dashboard: React.FC = () => {
             role="alert"
             className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-800 flex items-center justify-between"
           >
-            <span>Failed to load fields. Please check your connection and retry.</span>
+            <span>Failed to load plots. Please check your connection and retry.</span>
             <button
               onClick={() => refetchPlots()}
               className="px-3 py-1 bg-white border border-rose-300 text-rose-800 rounded font-semibold text-xs hover:bg-rose-100 transition"
@@ -129,16 +129,16 @@ export const Dashboard: React.FC = () => {
           </div>
         ) : plots.length === 0 ? (
           <div className="bg-white rounded-xl border border-stone-200 p-12 text-center shadow-sm space-y-3">
-            <h2 className="text-lg font-bold text-stone-900">No fields registered yet</h2>
+            <h2 className="text-lg font-bold text-stone-900">No plots yet</h2>
             <p className="text-sm text-stone-600 max-w-md mx-auto leading-relaxed">
-              Add a field with its crop, growth stage and location. The 5-day forecast for that
+              Add a plot with its crop, growth stage and location. The 5-day forecast for that
               location is evaluated against physiological thresholds for that exact growth stage.
             </p>
             <button
               onClick={() => setIsDialogOpen(true)}
               className="mt-2 inline-flex items-center px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold rounded-md shadow-sm transition"
             >
-              Add Your First Field
+              Add your first plot
             </button>
           </div>
         ) : (
